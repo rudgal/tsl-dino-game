@@ -4,12 +4,30 @@
  * https://iquilezles.org/articles/distfunctions2d/
  */
 
-import {
-  vec2, vec3, length, abs, min, max, sign, clamp, dot,
-  sqrt, sin, cos, atan2, acos, mod, pow, mix, step,
-  Fn, select, float
-} from 'three/tsl';
 import type { ShaderNodeObject } from 'three/tsl';
+import {
+  abs,
+  acos,
+  atan2,
+  clamp,
+  cos,
+  dot,
+  float,
+  Fn,
+  length,
+  max,
+  min,
+  mix,
+  mod,
+  pow,
+  select,
+  sign,
+  sin,
+  sqrt,
+  step,
+  vec2,
+  vec3
+} from 'three/tsl';
 
 // Type for function arguments
 type FnArguments = ShaderNodeObject<any>[];
@@ -309,6 +327,12 @@ export const sdRoundedX = Fn(([p, w, r]: FnArguments) => {
   return length(pAbs.sub(min(pAbs.x.add(pAbs.y), w).mul(0.5))).sub(r);
 });
 
+// Ellipse - simplified
+export const sdEllipseSimple = Fn(([p, radius, scale]: FnArguments) => {
+  const scaledPosition = p.mul(scale)
+  return length(scaledPosition).sub(radius)
+})
+
 // Ellipse
 export const sdEllipse = Fn(([p, ab]: FnArguments) => {
   const pAbs = abs(p);
@@ -336,8 +360,8 @@ export const sdEllipse = Fn(([p, ab]: FnArguments) => {
 
   // Branch 2: d >= 0.0
   const h2 = m.mul(n).mul(sqrt(d)).mul(2.0);
-  const s2 = sign(q.add(h2)).mul(pow(abs(q.add(h2)), 1.0/3.0));
-  const u2 = sign(q.sub(h2)).mul(pow(abs(q.sub(h2)), 1.0/3.0));
+  const s2 = sign(q.add(h2)).mul(pow(abs(q.add(h2)), 1.0 / 3.0));
+  const u2 = sign(q.sub(h2)).mul(pow(abs(q.sub(h2)), 1.0 / 3.0));
   const rx2 = s2.negate().sub(u2).sub(c.mul(4.0)).add(m2.mul(2.0));
   const ry2 = s2.sub(u2).mul(sqrt(3.0));
   const rm2 = sqrt(rx2.mul(rx2).add(ry2.mul(ry2)));
@@ -358,7 +382,7 @@ export const sdParabola = Fn(([pos, k]: FnArguments) => {
   const h = q.mul(q).sub(p.mul(p).mul(p));
   const r = sqrt(abs(h));
 
-  const x1 = pow(q.add(r), 1.0/3.0).sub(pow(abs(q.sub(r)), 1.0/3.0).mul(sign(r.sub(q))));
+  const x1 = pow(q.add(r), 1.0 / 3.0).sub(pow(abs(q.sub(r)), 1.0 / 3.0).mul(sign(r.sub(q))));
   const x2 = cos(atan2(r, q).div(3.0)).mul(sqrt(p)).mul(2.0);
   const x = select(h.greaterThan(0.0), x1, x2);
 
@@ -385,7 +409,7 @@ export const sdBezier = Fn(([pos, A, B, C]: FnArguments) => {
   // Branch 1: h >= 0.0
   const hSqrt = sqrt(h);
   const x_branch1 = vec2(hSqrt, hSqrt.negate()).sub(q).div(2.0);
-  const uv = sign(x_branch1).mul(pow(abs(x_branch1), vec2(1.0/3.0)));
+  const uv = sign(x_branch1).mul(pow(abs(x_branch1), vec2(1.0 / 3.0)));
   const t_branch1 = clamp(uv.x.add(uv.y).sub(kx), 0.0, 1.0);
   const res1 = dot2(d.add(c.add(b.mul(t_branch1)).mul(t_branch1)));
 

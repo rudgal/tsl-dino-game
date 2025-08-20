@@ -1,9 +1,9 @@
 import './style.css'
 import * as THREE from 'three/webgpu'
-import type { ShaderNodeObject } from 'three/tsl';
-import { abs, color, Fn, length, max, min, mix, negate, positionLocal, rotateUV, uniform, vec2, vec3 } from 'three/tsl';
+import { color, Fn, mix, positionLocal, uniform, vec2, vec3 } from 'three/tsl';
 import { GUI } from 'dat.gui'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { sdBox, sdCircle, sdEllipseSimple } from './sdf2d.ts';
 
 const scene = new THREE.Scene()
 
@@ -35,42 +35,14 @@ const options = {
 
 const rotationSpeed = uniform(options.rotationSpeed)
 
-type FnArguments = ShaderNodeObject<any>[];
-
-const Circle = Fn(([position, radius]: FnArguments) => {
-  return length(position).sub(radius)
-})
-
-const Ellipse = Fn(([position, radius, scale, angle]: FnArguments) => {
-  const angledPosition = rotateUV(position, angle, vec2())
-  const scaledPosition = angledPosition.mul(scale)
-  return length(scaledPosition).sub(radius)
-})
-
-const Box = Fn(([position, dimensions, angle]: FnArguments) => {
-  const angledPosition = rotateUV(position, angle, vec2())
-  const distance = abs(angledPosition).sub(dimensions)
-  return length(max(distance, 0.0)).add(min(max(distance.x, distance.y), 0.0))
-})
-
-// @ts-ignore - TSL object parameters appear not fully supported in TypeScript yet
-const col = Fn(({r, g, b}: any) => {
-  return vec3(r, g, b);
-}) as any;
-
 const main = Fn(() => {
   const p = positionLocal.toVar()
-  const t = 0 //time.div(2)
+  // const t = 0 //time.div(2)
   const radius = 0.25;
 
-  // const green1 = col( 0, 1, 0 ); // option 1
-  // const green2 = col( { r: 0, g: 1, b: 0 } ); // option 2
-
-  const circle = Circle(p.sub(vec2(-0.6, 0)), radius).smoothstep(0.005, 0)
-
-  const ellipse = Ellipse(p.sub(vec2(0, 0)), radius, vec2(1, 2), t).smoothstep(0.005, 0)
-
-  const box = Box(p.sub(vec2(0.6, 0)), vec2(radius, 0.25), negate(t)).smoothstep(0.005, 0)
+  const circle = sdCircle(p.sub(vec2(-0.6, 0)), radius).smoothstep(0.005, 0)
+  const ellipse = sdEllipseSimple(p.sub(vec2(0, 0)), radius, vec2(1, 2)).smoothstep(0.005, 0)
+  const box = sdBox(p.sub(vec2(0.6, 0)), vec2(radius, 0.25)).smoothstep(0.005, 0)
 
   const finalColour = mix(vec3(0), color('crimson'), circle)
   finalColour.assign(mix(finalColour, color('yellow'), ellipse))
