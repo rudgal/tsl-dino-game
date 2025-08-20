@@ -13,7 +13,7 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   10
 )
-camera.position.z = 1
+camera.position.z = 2.5
 
 const renderer = new THREE.WebGPURenderer({alpha: true, antialias: true})
 renderer.setSize(window.innerWidth, window.innerHeight)
@@ -55,7 +55,7 @@ const material = new THREE.NodeMaterial()
 material.fragmentNode = main()
 material.side = THREE.DoubleSide
 
-const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 0.8), material)
+const mesh = new THREE.Mesh(new THREE.PlaneGeometry(6, 1.5), material)
 scene.add(mesh)
 
 // renderer.debug.getShaderAsync(scene, camera, mesh).then((e) => {
