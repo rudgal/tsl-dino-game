@@ -9,6 +9,10 @@ import {
   sqrt, sin, cos, atan2, acos, mod, pow, mix, step,
   Fn, select, float
 } from 'three/tsl';
+import type { ShaderNodeObject } from 'three/tsl';
+
+// Type for function arguments
+type FnArguments = ShaderNodeObject<any>[];
 
 // Helper functions
 const dot2 = (v: any) => dot(v, v);
@@ -18,18 +22,18 @@ const dot2 = (v: any) => dot(v, v);
 // ============================================
 
 // Circle
-export const sdCircle = (p: any, r: any) => {
+export const sdCircle = Fn(([p, r]: FnArguments) => {
   return length(p).sub(r);
-};
+});
 
 // Box
-export const sdBox = (p: any, b: any) => {
+export const sdBox = Fn(([p, b]: FnArguments) => {
   const d = abs(p).sub(b);
   return length(max(d, 0.0)).add(min(max(d.x, d.y), 0.0));
-};
+});
 
 // Rounded Box
-export const sdRoundedBox = (p: any, b: any, r: any) => {
+export const sdRoundedBox = Fn(([p, b, r]: FnArguments) => {
   const px = p.x;
   const py = p.y;
 
@@ -40,10 +44,10 @@ export const sdRoundedBox = (p: any, b: any, r: any) => {
 
   const q = abs(p).sub(b).add(rx);
   return min(max(q.x, q.y), 0.0).add(length(max(q, 0.0))).sub(rx);
-};
+});
 
 // Oriented Box
-export const sdOrientedBox = (p: any, a: any, b: any, th: any) => {
+export const sdOrientedBox = Fn(([p, a, b, th]: FnArguments) => {
   const l = length(b.sub(a));
   const d = b.sub(a).div(l);
   const q = p.sub(a.add(b).mul(0.5));
@@ -57,20 +61,20 @@ export const sdOrientedBox = (p: any, a: any, b: any, th: any) => {
   const boxDim = vec2(l, th).mul(0.5);
   const qAbs = abs(qRotated).sub(boxDim);
   return length(max(qAbs, 0.0)).add(min(max(qAbs.x, qAbs.y), 0.0));
-};
+});
 
 // Segment
-export const sdSegment = (p: any, a: any, b: any) => {
+export const sdSegment = Fn(([p, a, b]: FnArguments) => {
   const pa = p.sub(a);
   const ba = b.sub(a);
   const h = clamp(dot(pa, ba).div(dot(ba, ba)), 0.0, 1.0);
   return length(pa.sub(ba.mul(h)));
-};
+});
 
 // Rhombus
-export const sdRhombus = (p: any, b: any) => {
+export const sdRhombus = Fn(([p, b]: FnArguments) => {
   const pAbs = abs(p);
-  const ndot = (a: any, b: any) => a.x.mul(b.x).sub(a.y.mul(b.y));
+  const ndot = Fn(([a, b]: FnArguments) => a.x.mul(b.x).sub(a.y.mul(b.y)));
   const h = clamp(
     ndot(b.sub(pAbs.mul(2.0)), b).div(dot(b, b)),
     -1.0,
@@ -80,14 +84,14 @@ export const sdRhombus = (p: any, b: any) => {
     pAbs.sub(b.mul(vec2(h.add(1.0), h.sub(1.0).negate()).mul(0.5)))
   );
   return d.mul(sign(pAbs.x.mul(b.y).add(pAbs.y.mul(b.x)).sub(b.x.mul(b.y))));
-};
+});
 
 // ============================================
 // Triangles
 // ============================================
 
 // Equilateral Triangle
-export const sdEquilateralTriangle = (p: any, r: any) => {
+export const sdEquilateralTriangle = Fn(([p, r]: FnArguments) => {
   const k = sqrt(3.0);
   const px = abs(p.x).sub(r);
   const py = p.y.add(r.div(k));
@@ -103,10 +107,10 @@ export const sdEquilateralTriangle = (p: any, r: any) => {
   const pxClamped = clamp(pFinal.x, r.mul(-2.0), 0.0);
 
   return length(vec2(pFinal.x.sub(pxClamped), pFinal.y)).negate().mul(sign(pFinal.y));
-};
+});
 
 // Isosceles Triangle
-export const sdTriangleIsosceles = (p: any, q: any) => {
+export const sdTriangleIsosceles = Fn(([p, q]: FnArguments) => {
   const px = abs(p.x);
   const a = vec2(px, p.y).sub(q.mul(clamp(dot(vec2(px, p.y), q).div(dot(q, q)), 0.0, 1.0)));
   const b = vec2(px, p.y).sub(q.mul(vec2(clamp(px.div(q.x), 0.0, 1.0), 1.0)));
@@ -118,14 +122,14 @@ export const sdTriangleIsosceles = (p: any, q: any) => {
   );
 
   return sqrt(d.x).negate().mul(sign(d.y));
-};
+});
 
 // ============================================
 // Polygons
 // ============================================
 
 // Pentagon
-export const sdPentagon = (p: any, r: any) => {
+export const sdPentagon = Fn(([p, r]: FnArguments) => {
   const k = vec3(0.809016994, 0.587785252, 0.726542528);
   const px = abs(p.x);
 
@@ -143,10 +147,10 @@ export const sdPentagon = (p: any, r: any) => {
   const p3 = p2.sub(vec2(clamp(p2.x, k.z.mul(r).negate(), k.z.mul(r)), r));
 
   return length(p3).mul(sign(p3.y));
-};
+});
 
 // Hexagon
-export const sdHexagon = (p: any, r: any) => {
+export const sdHexagon = Fn(([p, r]: FnArguments) => {
   const k = vec3(-0.866025404, 0.5, 0.577350269);
   const pAbs = abs(p);
 
@@ -159,10 +163,10 @@ export const sdHexagon = (p: any, r: any) => {
   const p2 = p1.sub(vec2(clamp(p1.x, k.z.mul(r).negate(), k.z.mul(r)), r));
 
   return length(p2).mul(sign(p2.y));
-};
+});
 
 // Octagon
-export const sdOctagon = (p: any, r: any) => {
+export const sdOctagon = Fn(([p, r]: FnArguments) => {
   const k = vec3(-0.9238795325, 0.3826834323, 0.4142135623);
   const pAbs = abs(p);
 
@@ -180,12 +184,12 @@ export const sdOctagon = (p: any, r: any) => {
   const p3 = p2.sub(vec2(clamp(p2.x, k.z.mul(r).negate(), k.z.mul(r)), r));
 
   return length(p3).mul(sign(p3.y));
-};
+});
 
 // Star (dynamic n and m parameters)
-export const sdStar = (p: any, r: any, n: any, m: any) => Fn(() => {
+export const sdStar = Fn(([p, r, n, m]: FnArguments) => {
   // Precompute for given shape
-  const an = float(3.141593).div(float(n));
+  const an = float(3.141593).div(n);
   const en = float(3.141593).div(m); // m is between 2 and n
   const acs = vec2(cos(an), sin(an));
   const ecs = vec2(cos(en), sin(en)); // ecs=vec2(0,1) for regular polygon
@@ -196,36 +200,36 @@ export const sdStar = (p: any, r: any, n: any, m: any) => Fn(() => {
   const p2 = p1.add(ecs.mul(clamp(dot(p1, ecs).negate(), 0.0, r.mul(acs.y).div(ecs.y))));
 
   return length(p2).mul(sign(p2.x));
-})();
+});
 
 // ============================================
 // Curves
 // ============================================
 
 // Pie
-export const sdPie = (p: any, c: any, r: any) => {
+export const sdPie = Fn(([p, c, r]: FnArguments) => {
   const px = abs(p.x);
   const l = length(vec2(px, p.y)).sub(r);
   const m = length(vec2(px, p.y).sub(c.mul(clamp(dot(vec2(px, p.y), c), 0.0, r))));
   return max(l, m.mul(sign(c.y.mul(px).sub(c.x.mul(p.y)))));
-};
+});
 
 // Arc
-export const sdArc = (p: any, sc: any, ra: any, rb: any) => {
+export const sdArc = Fn(([p, sc, ra, rb]: FnArguments) => {
   const px = abs(p.x);
   const condition = sc.y.mul(px).greaterThan(sc.x.mul(p.y));
   const dist1 = length(vec2(px, p.y).sub(sc.mul(ra)));
   const dist2 = abs(length(vec2(px, p.y)).sub(ra));
   return mix(dist2, dist1, condition).sub(rb);
-};
+});
 
 // Ring
-export const sdRing = (p: any, r: any, th: any) => {
+export const sdRing = Fn(([p, r, th]: FnArguments) => {
   return abs(length(p).sub(r)).sub(th.mul(0.5));
-};
+});
 
 // Horseshoe
-export const sdHorseshoe = (p: any, c: any, r: any, w: any) => {
+export const sdHorseshoe = Fn(([p, c, r, w]: FnArguments) => {
   const px = abs(p.x);
   const l = length(vec2(px, p.y));
 
@@ -245,14 +249,14 @@ export const sdHorseshoe = (p: any, c: any, r: any, w: any) => {
 
   const pFinal = vec2(pTransformed.x, abs(pTransformed.y.sub(r))).sub(w);
   return length(max(pFinal, 0.0)).add(min(max(pFinal.x, pFinal.y), 0.0));
-};
+});
 
 // ============================================
 // Special Shapes
 // ============================================
 
 // Heart
-export const sdHeart = (p: any) => {
+export const sdHeart = Fn(([p]: FnArguments) => {
   const px = abs(p.x);
 
   // Check if in upper part
@@ -267,10 +271,10 @@ export const sdHeart = (p: any) => {
   const lowerDist = sqrt(min(lowerPart1, lowerPart2)).mul(sign(px.sub(p.y)));
 
   return mix(lowerDist, upperDist, inUpper);
-};
+});
 
 // Egg
-export const sdEgg = (p: any, ra: any, rb: any) => {
+export const sdEgg = Fn(([p, ra, rb]: FnArguments) => {
   const k = sqrt(3.0);
   const px = abs(p.x);
   const r = ra.sub(rb);
@@ -287,26 +291,26 @@ export const sdEgg = (p: any, ra: any, rb: any) => {
     dist1,
     cond1
   ).sub(rb);
-};
+});
 
 // Cross exterior, bound interior
-export const sdCross = (p: any, b: any, r: any) => {
+export const sdCross = Fn(([p, b, r]: FnArguments) => {
   const pAbs = abs(p);
   const pSwap = mix(pAbs, vec2(pAbs.y, pAbs.x), step(pAbs.x, pAbs.y));
   const q = pSwap.sub(b);
   const k = max(q.y, q.x);
   const w = mix(vec2(b.y.sub(pSwap.x), k.negate()), q, step(0, k));
   return sign(k).mul(length(max(w, 0.0))).add(r);
-};
+});
 
 // Rounded X
-export const sdRoundedX = (p: any, w: any, r: any) => {
+export const sdRoundedX = Fn(([p, w, r]: FnArguments) => {
   const pAbs = abs(p);
   return length(pAbs.sub(min(pAbs.x.add(pAbs.y), w).mul(0.5))).sub(r);
-};
+});
 
 // Ellipse
-export const sdEllipse = (p: any, ab: any) => Fn(() => {
+export const sdEllipse = Fn(([p, ab]: FnArguments) => {
   const pAbs = abs(p);
   const p1 = select(pAbs.x.greaterThan(pAbs.y), vec2(pAbs.y, pAbs.x), pAbs);
   const ab1 = select(pAbs.x.greaterThan(pAbs.y), vec2(ab.y, ab.x), ab);
@@ -343,10 +347,10 @@ export const sdEllipse = (p: any, ab: any) => Fn(() => {
   const coSqr = co.mul(co);
   const r = ab1.mul(vec2(co, sqrt(float(1.0).sub(coSqr))));
   return length(r.sub(p1)).mul(sign(p1.y.sub(r.y)));
-})();
+});
 
 // Parabola
-export const sdParabola = (pos: any, k: any) => Fn(() => {
+export const sdParabola = Fn(([pos, k]: FnArguments) => {
   const px = abs(pos.x);
   const ik = float(1.0).div(k);
   const p = ik.mul(pos.y.sub(ik.mul(0.5))).div(3.0);
@@ -359,10 +363,10 @@ export const sdParabola = (pos: any, k: any) => Fn(() => {
   const x = select(h.greaterThan(0.0), x1, x2);
 
   return length(pos.sub(vec2(x, k.mul(x).mul(x)))).mul(sign(pos.x.sub(x)));
-})();
+});
 
 // Quadratic Bezier
-export const sdBezier = (pos: any, A: any, B: any, C: any) => Fn(() => {
+export const sdBezier = Fn(([pos, A, B, C]: FnArguments) => {
   const a = B.sub(A);
   const b = A.sub(B.mul(2.0)).add(C);
   const c = a.mul(2.0);
@@ -372,7 +376,7 @@ export const sdBezier = (pos: any, A: any, B: any, C: any) => Fn(() => {
   const ky = kk.mul(dot(a, a).mul(2.0).add(dot(d, b))).div(3.0);
   const kz = kk.mul(dot(d, a));
 
-  let res = float(0.0).toVar();
+  const res = float(0.0).toVar();
   const p = ky.sub(kx.mul(kx));
   const p3 = p.mul(p).mul(p);
   const q = kx.mul(kx.mul(kx).mul(2.0).sub(ky.mul(3.0))).add(kz);
@@ -399,10 +403,10 @@ export const sdBezier = (pos: any, A: any, B: any, C: any) => Fn(() => {
   res.assign(select(h.greaterThanEqual(0.0), res1, res2));
 
   return sqrt(res);
-})();
+});
 
 // Vesica
-export const sdVesica = (p: any, w: any, h: any) => {
+export const sdVesica = Fn(([p, w, h]: FnArguments) => {
   const pAbs = abs(p);
   const d = w.mul(w).sub(h.mul(h)).div(h).mul(0.5);
 
@@ -413,10 +417,10 @@ export const sdVesica = (p: any, w: any, h: any) => {
   );
 
   return length(vec2(pAbs.x, pAbs.y).sub(vec2(c.y, c.x))).sub(c.z);
-};
+});
 
 // Moon
-export const sdMoon = (p: any, d: any, ra: any, rb: any) => {
+export const sdMoon = Fn(([p, d, ra, rb]: FnArguments) => {
   const py = abs(p.y);
   const a = ra.mul(ra).sub(rb.mul(rb)).add(d.mul(d)).div(d.mul(2.0));
   const b = sqrt(max(ra.mul(ra).sub(a.mul(a)), 0.0));
@@ -429,10 +433,10 @@ export const sdMoon = (p: any, d: any, ra: any, rb: any) => {
   );
 
   return mix(dist2, dist1, cond);
-};
+});
 
 // Rounded Cross
-export const sdRoundedCross = (p: any, h: any) => {
+export const sdRoundedCross = Fn(([p, h]: FnArguments) => {
   const k = h.add(1.0).add(h.recip()).mul(0.5);
   const pAbs = abs(p);
 
@@ -444,7 +448,7 @@ export const sdRoundedCross = (p: any, h: any) => {
   ));
 
   return mix(dist2, dist1, cond);
-};
+});
 
 // ============================================
 // Operations
@@ -488,6 +492,7 @@ export const opSmoothIntersection = (d1: any, d2: any, k: any) => {
 };
 
 // Smooth subtraction
+// @ts-ignore
 export const opSmoothSubtraction = (d1: any, d2: any, k: any) => {
   const h = clamp(d1.add(d2).div(k.mul(2.0)).add(0.5), 0.0, 1.0);
   return mix(d2, d1.negate(), h).add(k.mul(h).mul(h.sub(1.0)));
