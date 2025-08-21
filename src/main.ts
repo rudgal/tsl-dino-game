@@ -54,11 +54,9 @@ const main = Fn(() => {
   const ellipse = sdEllipseSimple(p.sub(vec2(0, 0)), radius, vec2(1, 2)).smoothstep(0.005, 0)
   const box = sdBox(p.sub(vec2(0.6, 0)), vec2(radius, 0.25)).smoothstep(0.005, 0)
 
-  // Position horizon like in the original game (YPOS: 127 in ~150px canvas = bottom area)
-  // Horizon is 600x12px, needs to span our 6x1.5 plane, so scale needs to be smaller
-  // Scale calculation: plane_width / sprite_width = 6 / 600 = 0.01, but adjust for proper coverage
-  const horizonSprite = spriteHorizonRepeating(spriteTextureNode, p.sub(vec2(negate(t), -0.5)), 0.005)
-  const trexSprite = spriteTRex(spriteTextureNode, p.sub(vec2(0, -0.4)), 0.01, 1.0)
+  // Position horizon like in the original game
+  const horizonSprite = spriteHorizonRepeating(spriteTextureNode, p.sub(vec2(negate(t), -0.5)), 1.0)
+  const trexSprite = spriteTRex(spriteTextureNode, p.sub(vec2(0, -0.4)), 1.0, 1.0)
 
   const finalColour = mix(vec3(0), color('crimson'), circle)
   finalColour.assign(mix(finalColour, color('yellow'), ellipse))

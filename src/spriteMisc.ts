@@ -3,19 +3,26 @@
  * Contains cloud, horizon, restart, game over text, and star sprites
  */
 
-import { Fn, float, mod, vec4, vec2, texture, select } from 'three/tsl';
+import { float, Fn, mod, select, texture, vec2, vec4 } from 'three/tsl';
 import type { FnArguments } from './types.ts';
-import { sampleSprite, SPRITE_SHEET_WIDTH, SPRITE_SHEET_HEIGHT } from './spriteUtils.ts';
+import { PIXELS_PER_UNIT, sampleSprite, SPRITE_SHEET_HEIGHT, SPRITE_SHEET_WIDTH } from './spriteUtils.ts';
+
+export const HORIZON_WIDTH = 600 as const;
+export const HORIZON_HEIGHT = 12 as const;
 
 // Miscellaneous sprite coordinates (LDPI version from original Chrome game)
 export const MISC_SPRITES = {
   CLOUD: { x: 86, y: 2, width: 46, height: 14 },
-  HORIZON_FLAT: { x: 2, y: 54, width: 600, height: 12 }, // Flat terrain
-  HORIZON_BUMPY: { x: 602, y: 54, width: 600, height: 12 }, // Bumpy terrain (offset by 600px)
+  HORIZON_FLAT: { x: 2, y: 54, width: HORIZON_WIDTH, height: HORIZON_HEIGHT }, // Flat terrain
+  HORIZON_BUMPY: { x: 602, y: 54, width: HORIZON_WIDTH, height: HORIZON_HEIGHT }, // Bumpy terrain (offset by 600px)
   RESTART: { x: 2, y: 2, width: 36, height: 32 },
   TEXT_SPRITE: { x: 655, y: 2, width: 191, height: 11 }, // Contains "GAME OVER" text
   STAR: { x: 645, y: 2, width: 9, height: 9 }
-};
+} as const;
+
+// Precomputed dimensions in world units (100px = 1 unit)
+export const HORIZON_WIDTH_UNITS = MISC_SPRITES.HORIZON_BUMPY.width / PIXELS_PER_UNIT; // 6 units
+export const HORIZON_HEIGHT_UNITS = MISC_SPRITES.HORIZON_BUMPY.height / PIXELS_PER_UNIT; // 0.12 units
 
 export const spriteCloud = Fn(([spriteTexture, p, scale]: FnArguments) => {
   return sampleSprite(
@@ -28,36 +35,35 @@ export const spriteCloud = Fn(([spriteTexture, p, scale]: FnArguments) => {
 });
 
 export const spriteHorizonRepeating = Fn(([spriteTexture, p, scale]: FnArguments) => {
-  // Use bumpy horizon for testing
-  const spriteWidth = float(MISC_SPRITES.HORIZON_BUMPY.width);
-  const spriteHeight = float(MISC_SPRITES.HORIZON_BUMPY.height);
-  
-  // Scale the position
+  // Use precomputed constants
+  const spriteWidthUnits = float(HORIZON_WIDTH_UNITS);
+  const spriteHeightUnits = float(HORIZON_HEIGHT_UNITS);
+  const halfWidthUnits = float(HORIZON_WIDTH_UNITS / 2);
+  const halfHeightUnits = float(HORIZON_HEIGHT_UNITS / 2);
+
+  // Scale the position (scale=1 means actual size, scale=2 means double size, etc.)
   const localP = p.div(scale);
-  
+
   // Create repeating pattern by using modulo on X coordinate
-  // This makes the texture tile horizontally
-  const repeatingX = mod(localP.x.add(spriteWidth.div(2.0)), spriteWidth).sub(spriteWidth.div(2.0));
-  
-  // Now use the standard sprite sampling but with the repeating X position
-  const halfHeight = spriteHeight.div(2.0);
-  
+  // This makes the texture tile horizontally in world units
+  const repeatingX = mod(localP.x.add(halfWidthUnits), spriteWidthUnits).sub(halfWidthUnits);
+
   // Check if we're within the sprite bounds (Y only, since X repeats infinitely)
-  const inBoundsY = localP.y.greaterThanEqual(halfHeight.negate())
-    .and(localP.y.lessThanEqual(halfHeight));
-  
-  // Calculate UV coordinates for the repeating sprite
+  const inBoundsY = localP.y.greaterThanEqual(halfHeightUnits.negate())
+    .and(localP.y.lessThanEqual(halfHeightUnits));
+
+  // Calculate UV coordinates for the repeating sprite (normalized 0-1)
   const spriteUV = vec2(
-    repeatingX.add(spriteWidth.div(2.0)).div(spriteWidth),
-    halfHeight.sub(localP.y).div(spriteHeight)
+    repeatingX.add(halfWidthUnits).div(spriteWidthUnits),
+    halfHeightUnits.sub(localP.y).div(spriteHeightUnits)
   );
-  
-  // Map to texture coordinates using the constants
+
+  // Map to texture coordinates in the sprite sheet
   const textureUV = vec2(
-    float(MISC_SPRITES.HORIZON_BUMPY.x).add(spriteUV.x.mul(spriteWidth)).div(SPRITE_SHEET_WIDTH),
-    float(1.0).sub(float(MISC_SPRITES.HORIZON_BUMPY.y).add(spriteUV.y.mul(spriteHeight)).div(SPRITE_SHEET_HEIGHT))
+    float(MISC_SPRITES.HORIZON_BUMPY.x).add(spriteUV.x.mul(float(MISC_SPRITES.HORIZON_BUMPY.width))).div(SPRITE_SHEET_WIDTH),
+    float(1.0).sub(float(MISC_SPRITES.HORIZON_BUMPY.y).add(spriteUV.y.mul(float(MISC_SPRITES.HORIZON_BUMPY.height))).div(SPRITE_SHEET_HEIGHT))
   );
-  
+
   const texelColor = texture(spriteTexture, textureUV);
   return select(inBoundsY, texelColor, vec4(0, 0, 0, 0));
 });
