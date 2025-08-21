@@ -4,7 +4,6 @@
  * https://iquilezles.org/articles/distfunctions2d/
  */
 
-import type { ShaderNodeObject } from 'three/tsl';
 import {
   abs,
   acos,
@@ -28,9 +27,7 @@ import {
   vec2,
   vec3
 } from 'three/tsl';
-
-// Type for function arguments
-type FnArguments = ShaderNodeObject<any>[];
+import type { FnArguments } from './types.ts';
 
 // Helper functions
 const dot2 = (v: any) => dot(v, v);

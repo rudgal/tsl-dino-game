@@ -1,13 +1,9 @@
 /**
  * Sprite utilities for TSL shader system
- * Based on Chrome T-Rex sprite sheet coordinates
  */
 
 import { Fn, texture, vec2, vec4, select, float } from 'three/tsl';
-import type { ShaderNodeObject } from 'three/tsl';
-
-// Type for function arguments
-type FnArguments = ShaderNodeObject<any>[];
+import type { FnArguments } from './types.ts';
 
 // Sprite sheet dimensions (LDPI version)
 const SPRITE_SHEET_WIDTH = 1233;
