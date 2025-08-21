@@ -4,7 +4,7 @@ import { Fn, mix, positionLocal, uniform, vec2, vec3, texture, time, negate } fr
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GUI } from 'dat.gui';
 import { spriteHorizonRepeating } from './spriteMisc.ts';
-import { spriteTRex } from './spriteTRex.ts';
+import { spriteTRex, TREX_STATE } from './spriteTRex.ts';
 
 const scene = new THREE.Scene()
 
@@ -32,10 +32,12 @@ controls.enableDamping = true
 
 const options = {
   gameSpeed: 1,
+  trexState: TREX_STATE.RUNNING,
 }
 
-// Create uniform for game speed
+// Create uniforms
 const gameSpeedUniform = uniform(options.gameSpeed)
+const trexStateUniform = uniform(options.trexState as number)
 
 // Load sprite sheet texture
 const textureLoader = new THREE.TextureLoader()
@@ -52,7 +54,8 @@ const main = Fn(() => {
 
   // Position horizon like in the original game
   const horizonSprite = spriteHorizonRepeating(spriteTextureNode, p.sub(vec2(negate(t), -0.5)), 1.0)
-  const trexSprite = spriteTRex(spriteTextureNode, p.sub(vec2(-2.6, -0.37)), 1.0, 1.0)
+  // T-Rex with state-based animation
+  const trexSprite = spriteTRex(spriteTextureNode, p.sub(vec2(-2.6, -0.33)), 1.0, trexStateUniform, time)
 
   const finalColour = vec3(0)
   // Add horizon sprite to the final color
@@ -74,6 +77,18 @@ scene.add(mesh)
 const gui = new GUI()
 gui.add(options, 'gameSpeed', 0, 5, 0.1).onChange((value: number) => {
   gameSpeedUniform.value = value
+})
+
+// Add T-Rex state control
+const stateNames = {
+  'Waiting': TREX_STATE.WAITING,
+  'Running': TREX_STATE.RUNNING,
+  'Jumping': TREX_STATE.JUMPING,
+  'Ducking': TREX_STATE.DUCKING,
+  'Crashed': TREX_STATE.CRASHED
+}
+gui.add(options, 'trexState', stateNames).name('T-Rex State').onChange((value: number) => {
+  trexStateUniform.value = value
 })
 
 
