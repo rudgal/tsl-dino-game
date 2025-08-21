@@ -3,7 +3,7 @@
  * Contains cloud, horizon, restart, game over text, and star sprites
  */
 
-import { float, Fn, mod, select, texture, vec2, vec4 } from 'three/tsl';
+import { float, Fn, mod, select, texture, vec2, vec4, floor, mix } from 'three/tsl';
 import type { FnArguments } from './types.ts';
 import { PIXELS_PER_UNIT, sampleSprite, SPRITE_SHEET_HEIGHT, SPRITE_SHEET_WIDTH } from './spriteUtils.ts';
 
@@ -48,6 +48,17 @@ export const spriteHorizonRepeating = Fn(([spriteTexture, p, scale]: FnArguments
   // This makes the texture tile horizontally in world units
   const repeatingX = mod(localP.x.add(halfWidthUnits), spriteWidthUnits).sub(halfWidthUnits);
 
+  // Determine which segment we're in (even segments = flat, odd segments = bumpy)
+  const segmentIndex = floor(localP.x.add(halfWidthUnits).div(spriteWidthUnits));
+  const isOddSegment = mod(segmentIndex, float(2));
+
+  // Select sprite X coordinate based on segment (flat terrain at x=2, bumpy at x=602)
+  const spriteX = mix(
+    float(MISC_SPRITES.HORIZON_FLAT.x),
+    float(MISC_SPRITES.HORIZON_BUMPY.x),
+    isOddSegment
+  );
+
   // Check if we're within the sprite bounds (Y only, since X repeats infinitely)
   const inBoundsY = localP.y.greaterThanEqual(halfHeightUnits.negate())
     .and(localP.y.lessThanEqual(halfHeightUnits));
@@ -60,8 +71,8 @@ export const spriteHorizonRepeating = Fn(([spriteTexture, p, scale]: FnArguments
 
   // Map to texture coordinates in the sprite sheet
   const textureUV = vec2(
-    float(MISC_SPRITES.HORIZON_BUMPY.x).add(spriteUV.x.mul(float(MISC_SPRITES.HORIZON_BUMPY.width))).div(SPRITE_SHEET_WIDTH),
-    float(1.0).sub(float(MISC_SPRITES.HORIZON_BUMPY.y).add(spriteUV.y.mul(float(MISC_SPRITES.HORIZON_BUMPY.height))).div(SPRITE_SHEET_HEIGHT))
+    spriteX.add(spriteUV.x.mul(float(HORIZON_WIDTH))).div(SPRITE_SHEET_WIDTH),
+    float(1.0).sub(float(MISC_SPRITES.HORIZON_FLAT.y).add(spriteUV.y.mul(float(HORIZON_HEIGHT))).div(SPRITE_SHEET_HEIGHT))
   );
 
   const texelColor = texture(spriteTexture, textureUV);
