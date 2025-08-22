@@ -5,6 +5,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GUI } from 'dat.gui';
 import { spriteHorizonRepeating } from './spriteMisc.ts';
 import { spriteTRex, TREX_STATE } from './spriteTRex.ts';
+import { initJumpSystem, updateJump } from './jumpPhysics.ts';
 
 const scene = new THREE.Scene()
 
@@ -32,7 +33,7 @@ controls.enableDamping = true
 
 const options = {
   gameSpeed: 1,
-  trexState: TREX_STATE.RUNNING,
+  trexState: TREX_STATE.RUNNING as number,
   jumpOffsetY: 0,
 }
 
@@ -104,44 +105,26 @@ gui.add(options, 'jumpOffsetY', -0.5, 1.5, 0.01).onChange((value: number) => {
   uniformJumpOffsetY.value = value
 })
 
-/*
-  ==== KEYBOARD INPUTS ====
-*/
-const keyMap: { [key: string]: boolean } = {}
-const onKeyDownOrUpMapKey = (e: KeyboardEvent) => {
-  keyMap[e.code] = e.type === 'keydown'
-  return false
-}
-document.addEventListener('keydown', onKeyDownOrUpMapKey)
-document.addEventListener('keyup', onKeyDownOrUpMapKey)
-
-let canJump = true;
-
-function jump() {
-  if (!canJump) return;
-  canJump = false;
-  options.jumpOffsetY = 1;
-  gui.updateDisplay();
-  uniformJumpOffsetY.value = options.jumpOffsetY;
-  setTimeout(() => {
-    options.jumpOffsetY = 0;
-    gui.updateDisplay();
-    uniformJumpOffsetY.value = options.jumpOffsetY;
-    canJump = true;
-  }, 500);
-}
+// Initialize jump system
+initJumpSystem((newState: number) => {
+  options.trexState = newState;
+  uniformTRexState.value = options.trexState;
+});
 
 /*
   ==== ANIMATION LOOP ====
 */
+const clock = new THREE.Clock()
+
 function animate() {
-  controls.update()
+  const delta = clock.getDelta();
 
-  renderer.render(scene, camera)
+  controls.update();
 
-  if (keyMap['Space']) {
-    // jump
-    console.log('jump');
-    jump();
-  }
+  // Update jump physics (handles input and returns current offset)
+  options.jumpOffsetY = updateJump(delta);
+  uniformJumpOffsetY.value = options.jumpOffsetY;
+  gui.updateDisplay()
+
+  renderer.render(scene, camera);
 }
