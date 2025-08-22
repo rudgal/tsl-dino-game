@@ -32,8 +32,11 @@ window.addEventListener('resize', () => {
 const controls = new OrbitControls(camera, renderer.domElement)
 controls.enableDamping = true
 
+const GAME_SPEED_START = 3.6;
+const GAME_SPEED_MAX = 7.8;
 const options = {
-  gameSpeed: 1,
+  gameSpeed: GAME_SPEED_START,
+  gameSpeedAcceleration: 0.01,
   trexState: TREX_STATE.RUNNING as number,
   jumpOffsetY: 0,
 }
@@ -41,7 +44,7 @@ const options = {
 /*
   ==== UNIFORMS ====
 */
-const uniformGameSpeed = uniform(options.gameSpeed)
+const uniformGameSpeed = uniform(options.gameSpeed as number)
 const uniformTRexState = uniform(options.trexState as number)
 const uniformJumpOffsetY = uniform(options.jumpOffsetY)
 
@@ -90,7 +93,7 @@ scene.add(mesh)
   ==== GUI CONTROLS ====
 */
 const gui = new GUI()
-gui.add(options, 'gameSpeed', 0, 10, 0.1).onChange((value: number) => {
+gui.add(options, 'gameSpeed', 0.5, 10, 0.1).onChange((value: number) => {
   uniformGameSpeed.value = value
 })
 
@@ -125,6 +128,12 @@ function animate() {
   const delta = clock.getDelta();
 
   controls.update();
+
+  // Gradually increase game speed up to the maximum
+  if (options.gameSpeed < GAME_SPEED_MAX) {
+    options.gameSpeed += options.gameSpeedAcceleration * delta;
+    uniformGameSpeed.value = options.gameSpeed;
+  }
 
   // Update T-Rex controls (handles input and returns current jump offset)
   options.jumpOffsetY = controlsTRex(delta);
