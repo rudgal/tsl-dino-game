@@ -12,7 +12,6 @@ export const HORIZON_HEIGHT = 12 as const;
 
 // Miscellaneous sprite coordinates (LDPI version from original Chrome game)
 export const MISC_SPRITES = {
-  CLOUD: { x: 86, y: 2, width: 46, height: 14 },
   HORIZON_FLAT: { x: 2, y: 54, width: HORIZON_WIDTH, height: HORIZON_HEIGHT }, // Flat terrain
   HORIZON_BUMPY: { x: 602, y: 54, width: HORIZON_WIDTH, height: HORIZON_HEIGHT }, // Bumpy terrain (offset by 600px)
   RESTART: { x: 2, y: 2, width: 36, height: 32 },
@@ -24,15 +23,6 @@ export const MISC_SPRITES = {
 export const HORIZON_WIDTH_UNITS = MISC_SPRITES.HORIZON_BUMPY.width / PIXELS_PER_UNIT; // 6 units
 export const HORIZON_HEIGHT_UNITS = MISC_SPRITES.HORIZON_BUMPY.height / PIXELS_PER_UNIT; // 0.12 units
 
-export const spriteCloud = Fn(([spriteTexture, p, scale]: FnArguments) => {
-  return sampleSprite(
-    spriteTexture, p, scale,
-    float(MISC_SPRITES.CLOUD.x),
-    float(MISC_SPRITES.CLOUD.y),
-    float(MISC_SPRITES.CLOUD.width),
-    float(MISC_SPRITES.CLOUD.height)
-  );
-});
 
 export const spriteHorizonRepeating = Fn(([spriteTexture, p, scale]: FnArguments) => {
   // Use precomputed constants

@@ -6,6 +6,7 @@ import { GUI } from 'dat.gui';
 import { spriteHorizonRepeating } from './spriteMisc.ts';
 import { spriteTRex, TREX_STATE } from './spriteTRex.ts';
 import { initTRexControls, controlsTRex } from './tRexControls.ts';
+import { cloudField } from './spriteCloud.ts';
 
 const scene = new THREE.Scene()
 
@@ -58,17 +59,21 @@ const spriteTextureNode = texture(spriteTexture)
 */
 const main = Fn(() => {
   const p = positionLocal.toVar()
-  const t = time.mul(uniformGameSpeed)
+  const gameTime = time.mul(uniformGameSpeed)
 
   // Position horizon like in the original game
-  const horizonSprite = spriteHorizonRepeating(spriteTextureNode, p.sub(vec2(negate(t), -0.5)), 1.0)
+  const horizonSprite = spriteHorizonRepeating(spriteTextureNode, p.sub(vec2(negate(gameTime), -0.5)), 1.0)
+  // Cloud field with parallax scrolling
+  const cloudsSprite = cloudField(spriteTextureNode, p, gameTime, 1.0)
   // T-Rex with state-based animation
   const trexSprite = spriteTRex(spriteTextureNode, p.sub(vec2(-2.6, uniformJumpOffsetY.add(-0.38))), 0.78, uniformTRexState, time)
 
   const finalColour = vec3(0)
   // Add horizon sprite to the final color
   finalColour.assign(mix(finalColour, horizonSprite.xyz, horizonSprite.w))
-  // Blend sprites on top (using alpha blending)
+  // Add clouds behind the T-Rex (background layer)
+  finalColour.assign(mix(finalColour, cloudsSprite.xyz, cloudsSprite.w))
+  // Blend T-Rex on top (using alpha blending)
   finalColour.assign(mix(finalColour, trexSprite.xyz, trexSprite.w))
 
   return finalColour
@@ -85,7 +90,7 @@ scene.add(mesh)
   ==== GUI CONTROLS ====
 */
 const gui = new GUI()
-gui.add(options, 'gameSpeed', 0, 5, 0.1).onChange((value: number) => {
+gui.add(options, 'gameSpeed', 0, 10, 0.1).onChange((value: number) => {
   uniformGameSpeed.value = value
 })
 
