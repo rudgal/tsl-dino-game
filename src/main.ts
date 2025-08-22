@@ -91,9 +91,22 @@ gui.add(options, 'trexState', stateNames).name('T-Rex State').onChange((value: n
   trexStateUniform.value = value
 })
 
+const keyMap: { [key: string]: boolean } = {}
+const onKeyDownOrUpMapKey = (e: KeyboardEvent) => {
+  keyMap[e.code] = e.type === 'keydown'
+  return false
+}
+document.addEventListener('keydown', onKeyDownOrUpMapKey)
+document.addEventListener('keyup', onKeyDownOrUpMapKey)
+
 
 function animate() {
   controls.update()
 
   renderer.render(scene, camera)
+
+  if (keyMap['Space']) {
+    // jump
+    console.log('jump');
+  }
 }
