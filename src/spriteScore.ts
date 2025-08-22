@@ -3,7 +3,7 @@
  * Contains digit sprites for score display
  */
 
-import { float, Fn, int, mix, vec2 } from 'three/tsl';
+import { abs, float, floor, Fn, int, log, Loop, mix, pow, select, vec2, vec4 } from 'three/tsl';
 import type { FnArguments } from './types.ts';
 import { PIXELS_PER_UNIT, sampleSprite } from './spriteUtils.ts';
 
@@ -49,47 +49,70 @@ export const spriteHiText = Fn(([spriteTexture, p, scale]: FnArguments) => {
   );
 });
 
-/**
- * Renders a complete score with up to 5 digits
- * Reference point is the rightmost digit position
- * @param spriteTexture - The sprite sheet texture
- * @param p - Position coordinates
- * @param scale - Scale factor
- * @param score - Score value to display (0-99999)
- */
 export const spriteScore = Fn(([spriteTexture, p, scale, score]: FnArguments) => {
-  const scoreInt = int(score).clamp(0, 99999);
-
-  // Extract individual digits (rightmost first)
-  const digit0 = scoreInt.mod(10);
-  const digit1 = scoreInt.div(10).mod(10);
-  const digit2 = scoreInt.div(100).mod(10);
-  const digit3 = scoreInt.div(1000).mod(10);
-  const digit4 = scoreInt.div(10000).mod(10);
+  const scoreInt = int(score)
+  const numDigits = getDigitCountPerformant(scoreInt).clamp(5, 10);
 
   // Digit positions (rightmost digit at reference position)
   // Each digit is DIGIT_WIDTH_UNITS wide, positioned left of the previous one
   const digitSpacing = float(DIGIT_WIDTH_UNITS);
 
-  const pos0 = p; // Rightmost digit at reference position
-  const pos1 = p.add(vec2(digitSpacing, 0));
-  const pos2 = p.add(vec2(digitSpacing.mul(2), 0));
-  const pos3 = p.add(vec2(digitSpacing.mul(3), 0));
-  const pos4 = p.add(vec2(digitSpacing.mul(4), 0));
-
-  // Render each digit
-  const sprite0 = spriteDigit(spriteTexture, pos0, scale, digit0);
-  const sprite1 = spriteDigit(spriteTexture, pos1, scale, digit1);
-  const sprite2 = spriteDigit(spriteTexture, pos2, scale, digit2);
-  const sprite3 = spriteDigit(spriteTexture, pos3, scale, digit3);
-  const sprite4 = spriteDigit(spriteTexture, pos4, scale, digit4);
-
-  // Combine all sprites (right to left blending)
-  let result = sprite0;
-  result = mix(result, sprite1, sprite1.w);
-  result = mix(result, sprite2, sprite2.w);
-  result = mix(result, sprite3, sprite3.w);
-  result = mix(result, sprite4, sprite4.w);
+  // Combine sprites (right to left blending)
+  let result = vec4(0);
+  Loop({start: int(0), end: int(numDigits), type: 'int', condition: '<', name: 'i'}, ({i}) => {
+    const digit = getDigitAtPositionPerformant(scoreInt, i);
+    const digitPosition = p.add(vec2(digitSpacing.mul(i), 0));
+    const sprite = spriteDigit(spriteTexture, digitPosition, scale, digit);
+    result.assign(mix(result, sprite, sprite.w));
+  });
 
   return result;
 });
+
+const getDigitAtPosition = Fn(([value, digitIndex]: FnArguments) => {
+  const absValue = value.abs();
+  const divisor = pow(float(10), digitIndex.toFloat());
+  return int(absValue.div(divisor)).mod(10);
+});
+
+const getDigitAtPositionPerformant = Fn(([value, digitIndex]: FnArguments) => {
+  const absValue = abs(value);
+  // Cascade the divisor selection first, then apply mod(10) once
+  const divisor = select(digitIndex.equals(0), 1,
+      select(digitIndex.equals(1), 10,
+        select(digitIndex.equals(2), 100,
+          select(digitIndex.equals(3), 1000,
+            select(digitIndex.equals(4), 10000,
+              select(digitIndex.equals(5), 100000,
+                select(digitIndex.equals(6), 1000000,
+                  select(digitIndex.equals(7), 10000000,
+                    select(digitIndex.equals(8), 100000000, 1000000000)))))))));
+
+  // Single division and mod operation
+  return int(absValue.div(divisor)).mod(10);
+});
+
+// Pre-calculated constant
+const LOG10 = 2.302585093 as const; // Math.log(10)
+// More efficient log10
+const log10 = (x) => log(x).div(LOG10); // no log10 in tsl yet
+const getDigitCount = Fn(([value]: FnArguments) => {
+  const absValue = abs(value);
+  const numDigits = int(floor(log10(float(absValue))));
+  return select(absValue.equals(0), 1, numDigits.add(1));
+});
+
+const getDigitCountPerformant = Fn(([value]: FnArguments) => {
+  const absValue = abs(value);
+  return select(absValue.lessThan(10), 1,
+    select(absValue.lessThan(100), 2,
+      select(absValue.lessThan(1000), 3,
+        select(absValue.lessThan(10000), 4,
+          select(absValue.lessThan(100000), 5,
+            select(absValue.lessThan(1000000), 6,
+              select(absValue.lessThan(10000000), 7,
+                select(absValue.lessThan(100000000), 8,
+                  select(absValue.lessThan(1000000000), 9, 10)))))))));
+});
+
+

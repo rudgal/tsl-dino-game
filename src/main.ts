@@ -40,7 +40,7 @@ const options = {
   gameSpeedAcceleration: 0.01,
   trexState: TREX_STATE.RUNNING as number,
   jumpOffsetY: 0,
-  score: 123,
+  score: 112345,
 }
 
 /*
