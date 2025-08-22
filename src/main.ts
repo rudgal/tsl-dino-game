@@ -63,7 +63,7 @@ const main = Fn(() => {
   // Position horizon like in the original game
   const horizonSprite = spriteHorizonRepeating(spriteTextureNode, p.sub(vec2(negate(t), -0.5)), 1.0)
   // T-Rex with state-based animation
-  const trexSprite = spriteTRex(spriteTextureNode, p.sub(vec2(-2.6, uniformJumpOffsetY.add(-0.33))), 1.0, uniformTRexState, time)
+  const trexSprite = spriteTRex(spriteTextureNode, p.sub(vec2(-2.6, uniformJumpOffsetY.add(-0.38))), 0.78, uniformTRexState, time)
 
   const finalColour = vec3(0)
   // Add horizon sprite to the final color
