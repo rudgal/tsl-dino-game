@@ -1,6 +1,6 @@
 import './style.css'
 import * as THREE from 'three/webgpu'
-import { Fn, mix, positionLocal, uniform, vec2, vec3, texture, time, negate } from 'three/tsl';
+import { Fn, mix, negate, positionLocal, texture, time, uniform, vec2, vec3 } from 'three/tsl';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GUI } from 'dat.gui';
 import { spriteHorizonRepeating } from './spriteMisc.ts';
@@ -33,11 +33,15 @@ controls.enableDamping = true
 const options = {
   gameSpeed: 1,
   trexState: TREX_STATE.RUNNING,
+  jumpOffsetY: 0,
 }
 
-// Create uniforms
-const gameSpeedUniform = uniform(options.gameSpeed)
-const trexStateUniform = uniform(options.trexState as number)
+/*
+  ==== UNIFORMS ====
+*/
+const uniformGameSpeed = uniform(options.gameSpeed)
+const uniformTRexState = uniform(options.trexState as number)
+const uniformJumpOffsetY = uniform(options.jumpOffsetY)
 
 // Load sprite sheet texture
 const textureLoader = new THREE.TextureLoader()
@@ -48,14 +52,17 @@ spriteTexture.minFilter = THREE.NearestFilter
 spriteTexture.generateMipmaps = false
 const spriteTextureNode = texture(spriteTexture)
 
+/*
+  ==== FRAGMENT SHADER ====
+*/
 const main = Fn(() => {
   const p = positionLocal.toVar()
-  const t = time.mul(gameSpeedUniform)
+  const t = time.mul(uniformGameSpeed)
 
   // Position horizon like in the original game
   const horizonSprite = spriteHorizonRepeating(spriteTextureNode, p.sub(vec2(negate(t), -0.5)), 1.0)
   // T-Rex with state-based animation
-  const trexSprite = spriteTRex(spriteTextureNode, p.sub(vec2(-2.6, -0.33)), 1.0, trexStateUniform, time)
+  const trexSprite = spriteTRex(spriteTextureNode, p.sub(vec2(-2.6, uniformJumpOffsetY.add(-0.33))), 1.0, uniformTRexState, time)
 
   const finalColour = vec3(0)
   // Add horizon sprite to the final color
@@ -73,10 +80,12 @@ material.side = THREE.DoubleSide
 const mesh = new THREE.Mesh(new THREE.PlaneGeometry(6, 1.5), material)
 scene.add(mesh)
 
-// Setup dat.GUI
+/*
+  ==== GUI CONTROLS ====
+*/
 const gui = new GUI()
 gui.add(options, 'gameSpeed', 0, 5, 0.1).onChange((value: number) => {
-  gameSpeedUniform.value = value
+  uniformGameSpeed.value = value
 })
 
 // Add T-Rex state control
@@ -88,9 +97,16 @@ const stateNames = {
   'Crashed': TREX_STATE.CRASHED
 }
 gui.add(options, 'trexState', stateNames).name('T-Rex State').onChange((value: number) => {
-  trexStateUniform.value = value
+  uniformTRexState.value = value
 })
 
+gui.add(options, 'jumpOffsetY', -0.5, 1.5, 0.01).onChange((value: number) => {
+  uniformJumpOffsetY.value = value
+})
+
+/*
+  ==== KEYBOARD INPUTS ====
+*/
 const keyMap: { [key: string]: boolean } = {}
 const onKeyDownOrUpMapKey = (e: KeyboardEvent) => {
   keyMap[e.code] = e.type === 'keydown'
@@ -99,7 +115,25 @@ const onKeyDownOrUpMapKey = (e: KeyboardEvent) => {
 document.addEventListener('keydown', onKeyDownOrUpMapKey)
 document.addEventListener('keyup', onKeyDownOrUpMapKey)
 
+let canJump = true;
 
+function jump() {
+  if (!canJump) return;
+  canJump = false;
+  options.jumpOffsetY = 1;
+  gui.updateDisplay();
+  uniformJumpOffsetY.value = options.jumpOffsetY;
+  setTimeout(() => {
+    options.jumpOffsetY = 0;
+    gui.updateDisplay();
+    uniformJumpOffsetY.value = options.jumpOffsetY;
+    canJump = true;
+  }, 500);
+}
+
+/*
+  ==== ANIMATION LOOP ====
+*/
 function animate() {
   controls.update()
 
@@ -108,5 +142,6 @@ function animate() {
   if (keyMap['Space']) {
     // jump
     console.log('jump');
+    jump();
   }
 }
