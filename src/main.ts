@@ -7,6 +7,7 @@ import { spriteHorizonRepeating } from './spriteMisc.ts';
 import { spriteTRex, TREX_STATE } from './spriteTRex.ts';
 import { initTRexControls, controlsTRex } from './tRexControls.ts';
 import { cloudField } from './spriteCloud.ts';
+import { spriteScore } from './spriteScore.ts';
 
 const scene = new THREE.Scene()
 
@@ -39,6 +40,7 @@ const options = {
   gameSpeedAcceleration: 0.01,
   trexState: TREX_STATE.RUNNING as number,
   jumpOffsetY: 0,
+  score: 123,
 }
 
 /*
@@ -47,6 +49,7 @@ const options = {
 const uniformGameSpeed = uniform(options.gameSpeed as number)
 const uniformTRexState = uniform(options.trexState as number)
 const uniformJumpOffsetY = uniform(options.jumpOffsetY)
+const uniformScore = uniform(options.score)
 
 // Load sprite sheet texture
 const textureLoader = new THREE.TextureLoader()
@@ -70,6 +73,9 @@ const main = Fn(() => {
   const cloudsSprite = cloudField(spriteTextureNode, p, gameTime, 1.0)
   // T-Rex with state-based animation
   const trexSprite = spriteTRex(spriteTextureNode, p.sub(vec2(-2.6, uniformJumpOffsetY.add(-0.38))), 0.78, uniformTRexState, time)
+  // Score display - positioned at top right, rightmost digit as reference point
+  const scoreSprite = spriteScore(spriteTextureNode, p.sub(vec2(2.88, 0.6)), 1.0, uniformScore)
+
 
   const finalColour = vec3(0)
   // Add horizon sprite to the final color
@@ -78,6 +84,8 @@ const main = Fn(() => {
   finalColour.assign(mix(finalColour, cloudsSprite.xyz, cloudsSprite.w))
   // Blend T-Rex on top (using alpha blending)
   finalColour.assign(mix(finalColour, trexSprite.xyz, trexSprite.w))
+  // Add score elements on top (UI layer)
+  finalColour.assign(mix(finalColour, scoreSprite.xyz, scoreSprite.w))
 
   return finalColour
 })
@@ -113,6 +121,10 @@ gui.add(options, 'jumpOffsetY', -0.5, 1.5, 0.01).onChange((value: number) => {
   uniformJumpOffsetY.value = value
 })
 
+gui.add(options, 'score', 0, 99999, 1).onChange((value: number) => {
+  uniformScore.value = value
+})
+
 // Initialize T-Rex controls
 initTRexControls((newState: number) => {
   options.trexState = newState;
@@ -138,6 +150,7 @@ function animate() {
   // Update T-Rex controls (handles input and returns current jump offset)
   options.jumpOffsetY = controlsTRex(delta);
   uniformJumpOffsetY.value = options.jumpOffsetY;
+
   gui.updateDisplay()
 
   renderer.render(scene, camera);
