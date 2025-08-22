@@ -5,7 +5,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GUI } from 'dat.gui';
 import { spriteHorizonRepeating } from './spriteMisc.ts';
 import { spriteTRex, TREX_STATE } from './spriteTRex.ts';
-import { initJumpSystem, updateJump } from './jumpPhysics.ts';
+import { initTRexControls, controlsTRex } from './tRexControls.ts';
 
 const scene = new THREE.Scene()
 
@@ -105,8 +105,8 @@ gui.add(options, 'jumpOffsetY', -0.5, 1.5, 0.01).onChange((value: number) => {
   uniformJumpOffsetY.value = value
 })
 
-// Initialize jump system
-initJumpSystem((newState: number) => {
+// Initialize T-Rex controls
+initTRexControls((newState: number) => {
   options.trexState = newState;
   uniformTRexState.value = options.trexState;
 });
@@ -121,8 +121,8 @@ function animate() {
 
   controls.update();
 
-  // Update jump physics (handles input and returns current offset)
-  options.jumpOffsetY = updateJump(delta);
+  // Update T-Rex controls (handles input and returns current jump offset)
+  options.jumpOffsetY = controlsTRex(delta);
   uniformJumpOffsetY.value = options.jumpOffsetY;
   gui.updateDisplay()
 

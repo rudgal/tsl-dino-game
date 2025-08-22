@@ -1,17 +1,18 @@
 import { TREX_STATE } from './spriteTRex.ts';
 
-// Jump physics constants (framerate independent, units per second)
+// Jump physics constants (units per second)
 const JUMP_PHYSICS = {
-  INITIAL_JUMP_VELOCITY: 2.0,   // positive = upward (units/second)
-  GRAVITY: -4.0,                // negative = downward acceleration (units/second²)
+  INITIAL_JUMP_VELOCITY: 3.0,   // positive = upward (units/second)
+  GRAVITY: -9.0,                // negative = downward acceleration (units/second²)
   DROP_VELOCITY: -1.5,          // negative = fast downward velocity (units/second)
   GROUND_Y: 0,                  // ground level
   MIN_JUMP_HEIGHT: 0.4,         // minimum height before can fast-fall
   MAX_JUMP_HEIGHT: 0.8          // maximum jump height
 }
 
-// Jump state
+// T-Rex state
 let jumping = false;
+let ducking = false;
 let jumpVelocity = 0;
 let reachedMinHeight = false;
 let speedDrop = false;
@@ -20,9 +21,9 @@ let jumpOffsetY = 0;
 // Callback to update trex state
 let onStateChange: ((state: number) => void) | null = null;
 
-export function initJumpSystem(stateChangeCallback: (state: number) => void) {
+export function initTRexControls(stateChangeCallback: (state: number) => void) {
   onStateChange = stateChangeCallback;
-  
+
   // Set up single consolidated event handlers
   document.addEventListener('keydown', onKeyDown);
   document.addEventListener('keyup', onKeyUp);
@@ -32,8 +33,14 @@ function onKeyDown(e: KeyboardEvent) {
   if (e.code === 'Space' || e.code === 'ArrowUp') {
     e.preventDefault();
     startJump();
-  } else if (e.code === 'ArrowDown' && jumping) {
-    setSpeedDrop();
+  } else if (e.code === 'ArrowDown') {
+    if (jumping) {
+      // Speed drop during jump
+      setSpeedDrop();
+    } else if (!jumping && !ducking) {
+      // Duck when on ground
+      setDuck(true);
+    }
   }
 }
 
@@ -43,8 +50,9 @@ function onKeyUp(e: KeyboardEvent) {
       endJump();
     }
   } else if (e.code === 'ArrowDown') {
-    // Stop speed drop when releasing down arrow
+    // Stop speed drop and ducking
     speedDrop = false;
+    setDuck(false);
   }
 }
 
@@ -55,7 +63,7 @@ export function startJump() {
   jumpVelocity = JUMP_PHYSICS.INITIAL_JUMP_VELOCITY;
   reachedMinHeight = false;
   speedDrop = false;
-  
+
   if (onStateChange) {
     onStateChange(TREX_STATE.JUMPING);
   }
@@ -73,7 +81,21 @@ export function setSpeedDrop() {
   jumpVelocity = -2.0; // Force downward (units/second)
 }
 
-export function updateJump(deltaTimeSeconds: number): number {
+export function setDuck(isDucking: boolean) {
+  if (isDucking && !ducking) {
+    ducking = true;
+    if (onStateChange) {
+      onStateChange(TREX_STATE.DUCKING);
+    }
+  } else if (!isDucking && ducking) {
+    ducking = false;
+    if (onStateChange) {
+      onStateChange(TREX_STATE.RUNNING);
+    }
+  }
+}
+
+export function controlsTRex(deltaTimeSeconds: number): number {
   if (!jumping) return jumpOffsetY;
 
   // Update position based on velocity (framerate independent)
@@ -98,9 +120,12 @@ export function updateJump(deltaTimeSeconds: number): number {
     jumping = false;
     jumpVelocity = 0;
     reachedMinHeight = false;
-    speedDrop = false;
-    
-    if (onStateChange) {
+
+    // Speed drop becomes duck when landing
+    if (speedDrop) {
+      speedDrop = false;
+      setDuck(true);
+    } else if (onStateChange) {
       onStateChange(TREX_STATE.RUNNING);
     }
   }
