@@ -40,7 +40,7 @@ const options = {
   gameSpeedAcceleration: 0.01,
   trexState: TREX_STATE.RUNNING as number,
   jumpOffsetY: 0,
-  score: 112345,
+  score: 1112345,
 }
 
 /*
@@ -74,7 +74,7 @@ const main = Fn(() => {
   // T-Rex with state-based animation
   const trexSprite = spriteTRex(spriteTextureNode, p.sub(vec2(-2.6, uniformJumpOffsetY.add(-0.38))), 0.78, uniformTRexState, time)
   // Score display - positioned at top right, rightmost digit as reference point
-  const scoreSprite = spriteScore(spriteTextureNode, p.sub(vec2(2.88, 0.6)), 1.0, uniformScore)
+  const scoreSprite = spriteScore(spriteTextureNode, p.sub(vec2(2.88, 0.6)), 1.0, uniformScore, 0)
 
 
   const finalColour = vec3(0)

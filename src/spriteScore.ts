@@ -49,22 +49,39 @@ export const spriteHiText = Fn(([spriteTexture, p, scale]: FnArguments) => {
   );
 });
 
-export const spriteScore = Fn(([spriteTexture, p, scale, score]: FnArguments) => {
-  const scoreInt = int(score)
-  const numDigits = getDigitCountPerformant(scoreInt).clamp(5, 10);
+export const spriteScore = Fn(([spriteTexture, p, scale, score, hiScore]: FnArguments) => {
+  const scoreInt = int(score || 0);
+  const numDigitsScore = getDigitCountPerformant(scoreInt).clamp(5, 10);
+  const hiScoreInt = int(hiScore || 0);
+  const numDigitsHiScore = getDigitCountPerformant(hiScoreInt).clamp(5, 10);
 
   // Digit positions (rightmost digit at reference position)
   // Each digit is DIGIT_WIDTH_UNITS wide, positioned left of the previous one
   const digitSpacing = float(DIGIT_WIDTH_UNITS);
 
-  // Combine sprites (right to left blending)
-  let result = vec4(0);
-  Loop({start: int(0), end: int(numDigits), type: 'int', condition: '<', name: 'i'}, ({i}) => {
+
+  // Render current score
+  const result = vec4(0);
+  Loop({start: int(0), end: int(numDigitsScore), type: 'int', condition: '<', name: 'i'}, ({i}) => {
     const digit = getDigitAtPositionPerformant(scoreInt, i);
     const digitPosition = p.add(vec2(digitSpacing.mul(i), 0));
     const sprite = spriteDigit(spriteTexture, digitPosition, scale, digit);
     result.assign(mix(result, sprite, sprite.w));
   });
+
+  // Render high score digits
+  const offsetHiScore = digitSpacing.mul(numDigitsScore.add(2));
+  Loop({start: int(0), end: int(numDigitsHiScore), type: 'int', condition: '<', name: 'j'}, ({j}) => {
+    const digit = getDigitAtPositionPerformant(hiScoreInt, j);
+    const digitPosition = p.add(vec2(offsetHiScore.add(digitSpacing.mul(j)), 0));
+    const sprite = spriteDigit(spriteTexture, digitPosition, scale, digit);
+    result.assign(mix(result, sprite, sprite.w));
+  });
+
+  // Render HI text
+  const offsetHiText = offsetHiScore.add(digitSpacing.mul(numDigitsHiScore.add(2)));
+  const hiTextSprite = spriteHiText(spriteTexture, p.add(vec2(offsetHiText, 0)), scale);
+  result.assign(mix(result, hiTextSprite, hiTextSprite.w));
 
   return result;
 });
