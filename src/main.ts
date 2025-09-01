@@ -1,6 +1,6 @@
 import './style.css'
 import * as THREE from 'three/webgpu'
-import { Fn, mix, negate, positionLocal, texture, time, uniform, vec2, vec3 } from 'three/tsl';
+import { color, Fn, mix, negate, positionLocal, texture, time, uniform, vec2, vec3 } from 'three/tsl';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GUI } from 'dat.gui';
 import { spriteHorizonRepeating } from './spriteMisc.ts';
@@ -21,6 +21,7 @@ camera.position.z = 2.5
 
 const renderer = new THREE.WebGPURenderer({alpha: true, antialias: true})
 renderer.setSize(window.innerWidth, window.innerHeight)
+renderer.outputColorSpace = THREE.SRGBColorSpace
 document.body.appendChild(renderer.domElement)
 renderer.setAnimationLoop(animate)
 
@@ -59,6 +60,7 @@ const spriteTexture = textureLoader.load('/default_100_percent/100-offline-sprit
 spriteTexture.magFilter = THREE.NearestFilter
 spriteTexture.minFilter = THREE.NearestFilter
 spriteTexture.generateMipmaps = false
+spriteTexture.colorSpace = THREE.SRGBColorSpace // color space sRGB to match the colors from original game
 const spriteTextureNode = texture(spriteTexture)
 
 /*
@@ -78,7 +80,7 @@ const main = Fn(() => {
   const scoreSprite = spriteScore(spriteTextureNode, p.sub(vec2(2.88, 0.6)), 1.0, uniformScore, 0)
 
 
-  const finalColour = vec3(0)
+  const finalColour = color('#f7f7f7')
   // Add horizon sprite to the final color
   finalColour.assign(mix(finalColour, horizonSprite.xyz, horizonSprite.w))
   // Add clouds behind the T-Rex (background layer)

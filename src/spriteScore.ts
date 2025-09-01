@@ -69,19 +69,24 @@ export const spriteScore = Fn(([spriteTexture, p, scale, score, hiScore]: FnArgu
     result.assign(mix(result, sprite, sprite.w));
   });
 
-  // Render high score digits
+  // Render high score digits (with 80% opacity like the original)
+  const hiScoreOpacity = float(0.9);
   const offsetHiScore = digitSpacing.mul(numDigitsScore.add(2));
   Loop({start: int(0), end: int(numDigitsHiScore), type: 'int', condition: '<', name: 'j'}, ({j}) => {
     const digit = getDigitAtPositionPerformant(hiScoreInt, j);
     const digitPosition = p.add(vec2(offsetHiScore.add(digitSpacing.mul(j)), 0));
     const sprite = spriteDigit(spriteTexture, digitPosition, scale, digit);
-    result.assign(mix(result, sprite, sprite.w));
+    // Apply reduced opacity to high score digits
+    const dimmedSprite = vec4(sprite.xyz, sprite.w.mul(hiScoreOpacity));
+    result.assign(mix(result, dimmedSprite, dimmedSprite.w));
   });
 
-  // Render HI text
+  // Render HI text (with 80% opacity like the original)
   const offsetHiText = offsetHiScore.add(digitSpacing.mul(numDigitsHiScore.add(2)));
   const hiTextSprite = spriteHiText(spriteTexture, p.add(vec2(offsetHiText, 0)), scale);
-  result.assign(mix(result, hiTextSprite, hiTextSprite.w));
+  // Apply reduced opacity to HI text
+  const dimmedHiText = vec4(hiTextSprite.xyz, hiTextSprite.w.mul(hiScoreOpacity));
+  result.assign(mix(result, dimmedHiText, dimmedHiText.w));
 
   return result;
 });
