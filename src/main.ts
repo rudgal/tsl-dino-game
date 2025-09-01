@@ -5,7 +5,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GUI } from 'dat.gui';
 import { spriteHorizonRepeating } from './spriteMisc.ts';
 import { spriteTRex, TREX_STATE } from './spriteTRex.ts';
-import { initTRexControls, controlsTRex } from './tRexControls.ts';
+import { controlsTRex, initTRexControls } from './tRexControls.ts';
 import { cloudField } from './spriteCloud.ts';
 import { spriteScore } from './spriteScore.ts';
 
@@ -40,7 +40,8 @@ const options = {
   gameSpeedAcceleration: 0.01,
   trexState: TREX_STATE.RUNNING as number,
   jumpOffsetY: 0,
-  score: 1112345,
+  score: 0,
+  scoreCoefficient: 1.5,
 }
 
 /*
@@ -105,6 +106,8 @@ gui.add(options, 'gameSpeed', 0.5, 10, 0.1).onChange((value: number) => {
   uniformGameSpeed.value = value
 })
 
+gui.add(options, 'gameSpeedAcceleration', 0, 0.1, 0.001)
+
 // Add T-Rex state control
 const stateNames = {
   'Waiting': TREX_STATE.WAITING,
@@ -125,6 +128,8 @@ gui.add(options, 'score', 0, 99999, 1).onChange((value: number) => {
   uniformScore.value = value
 })
 
+gui.add(options, 'scoreCoefficient', 0.05, 10, 0.05)
+
 // Initialize T-Rex controls
 initTRexControls((newState: number) => {
   options.trexState = newState;
@@ -135,6 +140,7 @@ initTRexControls((newState: number) => {
   ==== ANIMATION LOOP ====
 */
 const clock = new THREE.Clock()
+let distanceRan = 0; // Track total distance in world units
 
 function animate() {
   const delta = clock.getDelta();
@@ -146,6 +152,15 @@ function animate() {
     options.gameSpeed += options.gameSpeedAcceleration * delta;
     uniformGameSpeed.value = options.gameSpeed;
   }
+
+  // Calculate distance traveled this frame and update score
+  const distanceDelta = options.gameSpeed * delta;
+  distanceRan += distanceDelta;
+
+  // Convert distance to score using same coefficient as reference
+  const calculatedScore = Math.floor(distanceRan * options.scoreCoefficient);
+  options.score = calculatedScore;
+  uniformScore.value = options.score;
 
   // Update T-Rex controls (handles input and returns current jump offset)
   options.jumpOffsetY = controlsTRex(delta);
