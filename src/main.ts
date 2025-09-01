@@ -8,6 +8,7 @@ import { spriteTRex, TREX_STATE } from './spriteTRex.ts';
 import { controlsTRex, initTRexControls } from './tRexControls.ts';
 import { cloudField } from './spriteCloud.ts';
 import { spriteScore } from './spriteScore.ts';
+import { calculateNightProgress } from './nightMode.ts';
 
 const scene = new THREE.Scene()
 
@@ -43,6 +44,7 @@ const options = {
   jumpOffsetY: 0,
   score: 0,
   scoreCoefficient: 1.5,
+  // nightMode removed - now calculated in shader based on score
 }
 
 /*
@@ -89,6 +91,11 @@ const main = Fn(() => {
   finalColour.assign(mix(finalColour, trexSprite.xyz, trexSprite.w))
   // Add score elements on top (UI layer)
   finalColour.assign(mix(finalColour, scoreSprite.xyz, scoreSprite.w))
+
+  // Apply night mode color inversion
+  const nightProgress = calculateNightProgress(uniformScore)
+  const invertedColour = vec3(1.0).sub(finalColour)
+  finalColour.assign(mix(finalColour, invertedColour, nightProgress))
 
   return finalColour
 })
