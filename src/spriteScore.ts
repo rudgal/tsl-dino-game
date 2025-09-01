@@ -3,7 +3,7 @@
  * Contains digit sprites for score display
  */
 
-import { abs, float, floor, Fn, int, log, Loop, mix, pow, select, vec2, vec4 } from 'three/tsl';
+import { abs, float, Fn, int, Loop, mix, select, vec2, vec4 } from 'three/tsl';
 import type { FnArguments } from './types.ts';
 import { PIXELS_PER_UNIT, sampleSprite } from './spriteUtils.ts';
 
@@ -62,7 +62,7 @@ export const spriteScore = Fn(([spriteTexture, p, scale, score, hiScore]: FnArgu
 
   // Render current score
   const result = vec4(0);
-  Loop({start: int(0), end: int(numDigitsScore), type: 'int', condition: '<', name: 'i'}, ({i}) => {
+  Loop({start: int(0), end: int(numDigitsScore), type: 'int', condition: '<'}, ({i}) => {
     const digit = getDigitAtPositionPerformant(scoreInt, i);
     const digitPosition = p.add(vec2(digitSpacing.mul(i), 0));
     const sprite = spriteDigit(spriteTexture, digitPosition, scale, digit);
@@ -72,9 +72,9 @@ export const spriteScore = Fn(([spriteTexture, p, scale, score, hiScore]: FnArgu
   // Render high score digits (with 80% opacity like the original)
   const hiScoreOpacity = float(0.9);
   const offsetHiScore = digitSpacing.mul(numDigitsScore.add(2));
-  Loop({start: int(0), end: int(numDigitsHiScore), type: 'int', condition: '<', name: 'j'}, ({j}) => {
-    const digit = getDigitAtPositionPerformant(hiScoreInt, j);
-    const digitPosition = p.add(vec2(offsetHiScore.add(digitSpacing.mul(j)), 0));
+  Loop({start: int(0), end: int(numDigitsHiScore), type: 'int', condition: '<'}, ({i}) => {
+    const digit = getDigitAtPositionPerformant(hiScoreInt, i);
+    const digitPosition = p.add(vec2(offsetHiScore.add(digitSpacing.mul(i)), 0));
     const sprite = spriteDigit(spriteTexture, digitPosition, scale, digit);
     // Apply reduced opacity to high score digits
     const dimmedSprite = vec4(sprite.xyz, sprite.w.mul(hiScoreOpacity));
@@ -91,38 +91,38 @@ export const spriteScore = Fn(([spriteTexture, p, scale, score, hiScore]: FnArgu
   return result;
 });
 
-const getDigitAtPosition = Fn(([value, digitIndex]: FnArguments) => {
-  const absValue = value.abs();
-  const divisor = pow(float(10), digitIndex.toFloat());
-  return int(absValue.div(divisor)).mod(10);
-});
+// const getDigitAtPosition = Fn(([value, digitIndex]: FnArguments) => {
+//   const absValue = value.abs();
+//   const divisor = pow(float(10), digitIndex.toFloat());
+//   return int(absValue.div(divisor)).mod(10);
+// });
 
 const getDigitAtPositionPerformant = Fn(([value, digitIndex]: FnArguments) => {
   const absValue = abs(value);
   // Cascade the divisor selection first, then apply mod(10) once
   const divisor = select(digitIndex.equals(0), 1,
-      select(digitIndex.equals(1), 10,
-        select(digitIndex.equals(2), 100,
-          select(digitIndex.equals(3), 1000,
-            select(digitIndex.equals(4), 10000,
-              select(digitIndex.equals(5), 100000,
-                select(digitIndex.equals(6), 1000000,
-                  select(digitIndex.equals(7), 10000000,
-                    select(digitIndex.equals(8), 100000000, 1000000000)))))))));
+    select(digitIndex.equals(1), 10,
+      select(digitIndex.equals(2), 100,
+        select(digitIndex.equals(3), 1000,
+          select(digitIndex.equals(4), 10000,
+            select(digitIndex.equals(5), 100000,
+              select(digitIndex.equals(6), 1000000,
+                select(digitIndex.equals(7), 10000000,
+                  select(digitIndex.equals(8), 100000000, 1000000000)))))))));
 
   // Single division and mod operation
   return int(absValue.div(divisor)).mod(10);
 });
 
-// Pre-calculated constant
-const LOG10 = 2.302585093 as const; // Math.log(10)
-// More efficient log10
-const log10 = (x) => log(x).div(LOG10); // no log10 in tsl yet
-const getDigitCount = Fn(([value]: FnArguments) => {
-  const absValue = abs(value);
-  const numDigits = int(floor(log10(float(absValue))));
-  return select(absValue.equals(0), 1, numDigits.add(1));
-});
+// // Pre-calculated constant
+// const LOG10 = 2.302585093 as const; // Math.log(10)
+// // More efficient log10
+// const log10 = (x) => log(x).div(LOG10); // no log10 in tsl yet
+// const getDigitCount = Fn(([value]: FnArguments) => {
+//   const absValue = abs(value);
+//   const numDigits = int(floor(log10(float(absValue))));
+//   return select(absValue.equals(0), 1, numDigits.add(1));
+// });
 
 const getDigitCountPerformant = Fn(([value]: FnArguments) => {
   const absValue = abs(value);
