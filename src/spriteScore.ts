@@ -100,15 +100,15 @@ export const spriteScore = Fn(([spriteTexture, p, scale, score, hiScore]: FnArgu
 const getDigitAtPositionPerformant = Fn(([value, digitIndex]: FnArguments) => {
   const absValue = abs(value);
   // Cascade the divisor selection first, then apply mod(10) once
-  const divisor = select(digitIndex.equals(0), 1,
-    select(digitIndex.equals(1), 10,
-      select(digitIndex.equals(2), 100,
-        select(digitIndex.equals(3), 1000,
-          select(digitIndex.equals(4), 10000,
-            select(digitIndex.equals(5), 100000,
-              select(digitIndex.equals(6), 1000000,
-                select(digitIndex.equals(7), 10000000,
-                  select(digitIndex.equals(8), 100000000, 1000000000)))))))));
+  const divisor = select(digitIndex.equal(0), 1,
+    select(digitIndex.equal(1), 10,
+      select(digitIndex.equal(2), 100,
+        select(digitIndex.equal(3), 1000,
+          select(digitIndex.equal(4), 10000,
+            select(digitIndex.equal(5), 100000,
+              select(digitIndex.equal(6), 1000000,
+                select(digitIndex.equal(7), 10000000,
+                  select(digitIndex.equal(8), 100000000, 1000000000)))))))));
 
   // Single division and mod operation
   return int(absValue.div(divisor)).mod(10);
@@ -121,7 +121,7 @@ const getDigitAtPositionPerformant = Fn(([value, digitIndex]: FnArguments) => {
 // const getDigitCount = Fn(([value]: FnArguments) => {
 //   const absValue = abs(value);
 //   const numDigits = int(floor(log10(float(absValue))));
-//   return select(absValue.equals(0), 1, numDigits.add(1));
+//   return select(absValue.equal(0), 1, numDigits.add(1));
 // });
 
 const getDigitCountPerformant = Fn(([value]: FnArguments) => {
