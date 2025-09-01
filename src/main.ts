@@ -11,6 +11,7 @@ import { spriteScore } from './spriteScore.ts';
 import { calculateNightMode } from './nightMode.ts';
 import { spriteMoon } from './spriteMoon.ts';
 import { spriteStars } from './spriteStars.ts';
+import { spriteObstacle } from './spriteObstacle.ts';
 
 const scene = new THREE.Scene()
 
@@ -95,6 +96,9 @@ const main = Fn(() => {
   // Position horizon like in the original game
   const horizonSprite = spriteHorizonRepeating(spriteTextureNode, p.sub(vec2(negate(gameTime), -0.5)), 1.0)
   finalColour.assign(mix(finalColour, horizonSprite.xyz, horizonSprite.w))
+
+  const obstacleSprite = spriteObstacle(spriteTextureNode, p, gameTime, 0.8, uniformScore)
+  finalColour.assign(mix(finalColour, obstacleSprite.xyz, obstacleSprite.w))
 
   // T-Rex with state-based animation
   const trexSprite = spriteTRex(spriteTextureNode, p.sub(vec2(-2.6, uniformJumpOffsetY.add(-0.38))), 0.78, uniformTRexState, time)
