@@ -9,6 +9,8 @@ import { controlsTRex, initTRexControls } from './tRexControls.ts';
 import { cloudField } from './spriteCloud.ts';
 import { spriteScore } from './spriteScore.ts';
 import { calculateNightMode } from './nightMode.ts';
+import { spriteMoon } from './spriteMoon.ts';
+import { spriteStars } from './spriteStars.ts';
 
 const scene = new THREE.Scene()
 
@@ -72,29 +74,39 @@ const main = Fn(() => {
   const p = positionLocal.toVar()
   const gameTime = time.mul(uniformGameSpeed)
 
-  // Position horizon like in the original game
-  const horizonSprite = spriteHorizonRepeating(spriteTextureNode, p.sub(vec2(negate(gameTime), -0.5)), 1.0)
-  // Cloud field with parallax scrolling
-  const cloudsSprite = cloudField(spriteTextureNode, p, gameTime, 1.0)
-  // T-Rex with state-based animation
-  const trexSprite = spriteTRex(spriteTextureNode, p.sub(vec2(-2.6, uniformJumpOffsetY.add(-0.38))), 0.78, uniformTRexState, time)
-  // Score display - positioned at top right, rightmost digit as reference point
-  const scoreSprite = spriteScore(spriteTextureNode, p.sub(vec2(2.88, 0.6)), 1.0, uniformScore, 0)
-
+  // Calculate night mode data early for moon/stars
+  const nightData = calculateNightMode(uniformScore)
+  const nightProgress = nightData.x
 
   const finalColour = color('#f7f7f7')
-  // Add horizon sprite to the final color
-  finalColour.assign(mix(finalColour, horizonSprite.xyz, horizonSprite.w))
-  // Add clouds behind the T-Rex (background layer)
+
+  // Render stars (background layer, behind everything)
+  const starsSprite = spriteStars(spriteTextureNode, p, gameTime, nightData)
+  finalColour.assign(mix(finalColour, starsSprite.xyz, starsSprite.w))
+
+  // Render moon (behind clouds but in front of stars)
+  const moonSprite = spriteMoon(spriteTextureNode, p, gameTime, nightData)
+  finalColour.assign(mix(finalColour, moonSprite.xyz, moonSprite.w))
+
+  // Cloud field with parallax scrolling
+  const cloudsSprite = cloudField(spriteTextureNode, p, gameTime, 1.0)
   finalColour.assign(mix(finalColour, cloudsSprite.xyz, cloudsSprite.w))
-  // Blend T-Rex on top (using alpha blending)
+
+  // Position horizon like in the original game
+  const horizonSprite = spriteHorizonRepeating(spriteTextureNode, p.sub(vec2(negate(gameTime), -0.5)), 1.0)
+  finalColour.assign(mix(finalColour, horizonSprite.xyz, horizonSprite.w))
+
+  // T-Rex with state-based animation
+  const trexSprite = spriteTRex(spriteTextureNode, p.sub(vec2(-2.6, uniformJumpOffsetY.add(-0.38))), 0.78, uniformTRexState, time)
   finalColour.assign(mix(finalColour, trexSprite.xyz, trexSprite.w))
+
+  // Score display - positioned at top right, rightmost digit as reference point
+  const scoreSprite = spriteScore(spriteTextureNode, p.sub(vec2(2.88, 0.6)), 1.0, uniformScore, 0)
   // Add score elements on top (UI layer)
   finalColour.assign(mix(finalColour, scoreSprite.xyz, scoreSprite.w))
 
+
   // Apply night mode color inversion
-  const nightData = calculateNightMode(uniformScore)
-  const nightProgress = nightData.x
   const invertedColour = vec3(1.0).sub(finalColour)
   finalColour.assign(mix(finalColour, invertedColour, nightProgress))
 
@@ -139,6 +151,25 @@ gui.add(options, 'score', 0, 99999, 1).onChange((value: number) => {
 })
 
 gui.add(options, 'scoreCoefficient', 0.05, 10, 0.05)
+
+// Add button to trigger next night mode
+const triggerNextNight = {
+  trigger: () => {
+    // Calculate the next night trigger point
+    const currentScore = options.score;
+    const nextNightScore = Math.ceil(currentScore / 700) * 700;
+
+    // Convert score back to distanceRan using the coefficient
+    // score = distanceRan * scoreCoefficient, so distanceRan = score / scoreCoefficient
+    const targetDistance = nextNightScore / options.scoreCoefficient;
+    distanceRan = targetDistance;
+
+    // Update score immediately
+    options.score = nextNightScore;
+    uniformScore.value = options.score;
+  }
+};
+gui.add(triggerNextNight, 'trigger').name('Trigger Next Night')
 
 // Initialize T-Rex controls
 initTRexControls((newState: number) => {

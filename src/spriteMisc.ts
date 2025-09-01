@@ -16,7 +16,6 @@ export const MISC_SPRITES = {
   HORIZON_BUMPY: { x: 602, y: 54, width: HORIZON_WIDTH, height: HORIZON_HEIGHT }, // Bumpy terrain (offset by 600px)
   RESTART: { x: 2, y: 2, width: 36, height: 32 },
   TEXT_SPRITE: { x: 655, y: 2, width: 191, height: 11 }, // Contains "GAME OVER" text
-  STAR: { x: 645, y: 2, width: 9, height: 9 }
 } as const;
 
 // Precomputed dimensions in world units (100px = 1 unit)
@@ -89,12 +88,3 @@ export const spriteGameOver = Fn(([spriteTexture, p, scale]: FnArguments) => {
   );
 });
 
-export const spriteStar = Fn(([spriteTexture, p, scale]: FnArguments) => {
-  return sampleSprite(
-    spriteTexture, p, scale,
-    float(MISC_SPRITES.STAR.x),
-    float(MISC_SPRITES.STAR.y),
-    float(MISC_SPRITES.STAR.width),
-    float(MISC_SPRITES.STAR.height)
-  );
-});
