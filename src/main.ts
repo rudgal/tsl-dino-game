@@ -8,7 +8,7 @@ import { spriteTRex, TREX_STATE } from './spriteTRex.ts';
 import { controlsTRex, initTRexControls } from './tRexControls.ts';
 import { cloudField } from './spriteCloud.ts';
 import { spriteScore } from './spriteScore.ts';
-import { calculateNightProgress } from './nightMode.ts';
+import { calculateNightMode } from './nightMode.ts';
 
 const scene = new THREE.Scene()
 
@@ -93,7 +93,8 @@ const main = Fn(() => {
   finalColour.assign(mix(finalColour, scoreSprite.xyz, scoreSprite.w))
 
   // Apply night mode color inversion
-  const nightProgress = calculateNightProgress(uniformScore)
+  const nightData = calculateNightMode(uniformScore)
+  const nightProgress = nightData.x
   const invertedColour = vec3(1.0).sub(finalColour)
   finalColour.assign(mix(finalColour, invertedColour, nightProgress))
 
