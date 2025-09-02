@@ -48,6 +48,12 @@ const options = {
   score: 0,
   scoreCoefficient: 1.5,
   // nightMode removed - now calculated in shader based on score
+
+  // Reference overlay options
+  referenceImage: 'None', //'Reference 01',
+  referenceOpacity: 50,
+  referenceColorShift: true,
+  referenceScale: 100
 }
 
 /*
@@ -175,6 +181,23 @@ const triggerNextNight = {
 };
 gui.add(triggerNextNight, 'trigger').name('Trigger Next Night')
 
+// Reference image overlay controls
+const referenceFolder = gui.addFolder('Reference Overlay')
+const imageOptions = ['None', 'Reference 01', 'Reference 02', 'Game Over']
+referenceFolder.add(options, 'referenceImage', imageOptions).name('Image').onChange(() => {
+  updateReferenceImage()
+})
+referenceFolder.add(options, 'referenceOpacity', 0, 100, 1).name('Opacity %').onChange(() => {
+  updateReferenceImage()
+})
+referenceFolder.add(options, 'referenceColorShift').name('Red Color Shift').onChange(() => {
+  updateReferenceImage()
+})
+referenceFolder.add(options, 'referenceScale', 25, 200, 1).name('Scale %').onChange(() => {
+  updateReferenceImage()
+})
+updateReferenceImage()
+
 // Initialize T-Rex controls
 initTRexControls((newState: number) => {
   options.trexState = newState;
@@ -214,4 +237,42 @@ function animate() {
   gui.updateDisplay()
 
   renderer.render(scene, camera);
+}
+
+/*
+  ==== REFERENCE IMAGE OVERLAY ====
+*/
+function updateReferenceImage() {
+  const referenceImage = document.getElementById('reference-image') as HTMLImageElement;
+  const referenceOverlay = document.getElementById('reference-overlay') as HTMLDivElement;
+  if (!referenceImage || !referenceOverlay) return;
+
+  const imageMap: Record<string, string> = {
+    'None': '',
+    'Reference 01': '/reference/reference_01.png',
+    'Reference 02': '/reference/reference_02.png',
+    'Game Over': '/reference/reference_gameOver.png'
+  };
+
+  const imagePath = imageMap[options.referenceImage];
+  if (imagePath) {
+    referenceOverlay.style.display = 'block';
+    referenceImage.src = imagePath;
+    referenceImage.style.display = 'block';
+    referenceImage.style.opacity = (options.referenceOpacity / 100).toString();
+
+    // Apply scaling while preserving aspect ratio
+    const scaleValue = options.referenceScale / 100;
+    referenceImage.style.transform = `scale(${scaleValue})`;
+
+    // Apply color shift instead of invert
+    if (options.referenceColorShift) {
+      referenceImage.classList.add('color-shift');
+    } else {
+      referenceImage.classList.remove('color-shift');
+    }
+  } else {
+    referenceOverlay.style.display = 'none';
+    referenceImage.style.display = 'none';
+  }
 }

@@ -26,6 +26,7 @@ body {
   margin: 0;
   display: flex;
   place-items: center;
+  position: relative;
 }
 
 @media (prefers-color-scheme: light) {
@@ -39,4 +40,42 @@ body {
   button {
     background-color: #f9f9f9;
   }
+}
+
+/* Reference Image Overlay */
+.reference-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.reference-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0.5;
+  pointer-events: none;
+  mix-blend-mode: normal;
+  transform-origin: center center;
+}
+
+.reference-image.color-shift {
+  filter: 
+    grayscale(1) 
+    sepia(1) 
+    hue-rotate(0deg) 
+    saturate(3) 
+    brightness(0.9)
+    contrast(1.2);
+}
+
+.dg.ac {
+    z-index: 1001 !important; /* Ensure dat.GUI is above other elements */
 }
