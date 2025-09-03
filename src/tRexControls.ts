@@ -130,7 +130,7 @@ export function controlsTRex(deltaTimeSeconds: number): number {
     }
   }
 
-  console.log(`Jump Y: ${jumpOffsetY.toFixed(2)}, Velocity: ${jumpVelocity.toFixed(2)}, Delta: ${deltaTimeSeconds.toFixed(3)}`);
+  // console.log(`Jump Y: ${jumpOffsetY.toFixed(2)}, Velocity: ${jumpVelocity.toFixed(2)}, Delta: ${deltaTimeSeconds.toFixed(3)}`);
   return jumpOffsetY;
 }
 
