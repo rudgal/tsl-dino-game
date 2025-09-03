@@ -53,7 +53,7 @@ const options = {
   referenceImage: 'None', //'Reference 01',
   referenceOpacity: 50,
   referenceColorShift: true,
-  referenceScale: 100
+  referenceScale: 88.6
 }
 
 /*
@@ -100,18 +100,18 @@ const main = Fn(() => {
   finalColour.assign(mix(finalColour, cloudsSprite.xyz, cloudsSprite.w))
 
   // Position horizon like in the original game
-  const horizonSprite = spriteHorizonRepeating(spriteTextureNode, p.sub(vec2(negate(gameTime), -0.5)), 1.0)
+  const horizonSprite = spriteHorizonRepeating(spriteTextureNode, p.sub(vec2(negate(gameTime), -0.58)), 1.0)
   finalColour.assign(mix(finalColour, horizonSprite.xyz, horizonSprite.w))
 
-  const obstacleSprite = spriteObstacle(spriteTextureNode, p, gameTime, 0.8, uniformScore)
+  const obstacleSprite = spriteObstacle(spriteTextureNode, p, gameTime, 1, uniformScore)
   finalColour.assign(mix(finalColour, obstacleSprite.xyz, obstacleSprite.w))
 
   // T-Rex with state-based animation
-  const trexSprite = spriteTRex(spriteTextureNode, p.sub(vec2(-2.6, uniformJumpOffsetY.add(-0.38))), 0.78, uniformTRexState, time)
+  const trexSprite = spriteTRex(spriteTextureNode, p.sub(vec2(-2.79, uniformJumpOffsetY.add(-0.41))), 1, uniformTRexState, time)
   finalColour.assign(mix(finalColour, trexSprite.xyz, trexSprite.w))
 
   // Score display - positioned at top right, rightmost digit as reference point
-  const scoreSprite = spriteScore(spriteTextureNode, p.sub(vec2(2.88, 0.6)), 1.0, uniformScore, 0)
+  const scoreSprite = spriteScore(spriteTextureNode, p.sub(vec2(2.83, 0.59)), 0.95, uniformScore, 0)
   // Add score elements on top (UI layer)
   finalColour.assign(mix(finalColour, scoreSprite.xyz, scoreSprite.w))
 

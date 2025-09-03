@@ -2,12 +2,12 @@ import { TREX_STATE } from './spriteTRex.ts';
 
 // Jump physics constants (units per second)
 const JUMP_PHYSICS = {
-  INITIAL_JUMP_VELOCITY: 3.0,   // positive = upward (units/second)
+  INITIAL_JUMP_VELOCITY: 4.0,   // positive = upward (units/second)
   GRAVITY: -9.0,                // negative = downward acceleration (units/second²)
   DROP_VELOCITY: -1.5,          // negative = fast downward velocity (units/second)
   GROUND_Y: 0,                  // ground level
   MIN_JUMP_HEIGHT: 0.4,         // minimum height before can fast-fall
-  MAX_JUMP_HEIGHT: 0.8          // maximum jump height
+  MAX_JUMP_HEIGHT: 3.5            // maximum jump height
 }
 
 // T-Rex state

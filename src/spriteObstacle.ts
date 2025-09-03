@@ -19,8 +19,9 @@ export const OBSTACLE_CONFIG = {
   LARGE_CACTUS_GROUP_SCORE: 300, // Original: speed 7.0
 
   // Heights (in world units)
-  CACTUS_HEIGHT: -0.38,       // Ground level for cacti
-  PTERODACTYL_HEIGHTS: [-0.1, -0.25, -0.4], // High, Mid, Low positions
+  CACTUS_SMALL_HEIGHT_OFFSET: -0.47,    // Small cacti positioned lower (35px tall)
+  CACTUS_LARGE_HEIGHT_OFFSET: -0.39,    // Large cacti ground level (50px tall)
+  PTERODACTYL_HEIGHT_OFFSETS: [-0.1, -0.25, -0.4], // High, Mid, Low positions
 
   // Gaps and spacing
   CACTUS_BASE_GAP: 1.2,      // ~120px in original
@@ -62,19 +63,23 @@ export const spriteObstacle = Fn(([spriteTexture, p, gameTime, scale, currentSco
   const obstaclePos = vec2(centeredX, scrolledP.y);
 
   // Variable pterodactyl heights - use obstacleVariant to select from 3 positions
-  const pterodactylHeight = select(
-    obstacleVariant.lessThan(1), float(OBSTACLE_CONFIG.PTERODACTYL_HEIGHTS[0]),  // High position
+  const pterodactylHeightOffset = select(
+    obstacleVariant.lessThan(1), float(OBSTACLE_CONFIG.PTERODACTYL_HEIGHT_OFFSETS[0]),  // High position
     select(
-      obstacleVariant.lessThan(2), float(OBSTACLE_CONFIG.PTERODACTYL_HEIGHTS[1]), // Mid position
-      float(OBSTACLE_CONFIG.PTERODACTYL_HEIGHTS[2]) // Low position
+      obstacleVariant.lessThan(2), float(OBSTACLE_CONFIG.PTERODACTYL_HEIGHT_OFFSETS[1]), // Mid position
+      float(OBSTACLE_CONFIG.PTERODACTYL_HEIGHT_OFFSETS[2]) // Low position
     )
   );
 
   // Determine height offset based on obstacle type
   const heightOffset = select(
-    obstacleType.lessThan(1.5), // Small or large cactus
-    float(OBSTACLE_CONFIG.CACTUS_HEIGHT),
-    pterodactylHeight // Pterodactyl
+    obstacleType.lessThan(0.5), // Small cactus
+    float(OBSTACLE_CONFIG.CACTUS_SMALL_HEIGHT_OFFSET),
+    select(
+      obstacleType.lessThan(1.5), // Large cactus
+      float(OBSTACLE_CONFIG.CACTUS_LARGE_HEIGHT_OFFSET),
+      pterodactylHeightOffset // Pterodactyl
+    )
   );
 
   const adjustedPos = obstaclePos.sub(vec2(0, heightOffset));
