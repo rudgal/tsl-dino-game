@@ -1,6 +1,6 @@
 import './style.css'
 import * as THREE from 'three/webgpu'
-import { color, Fn, mix, negate, positionLocal, texture, time, uniform, vec2, vec3 } from 'three/tsl';
+import { color, float, Fn, mix, negate, positionLocal, select, texture, time, uniform, vec2, vec3 } from 'three/tsl';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GUI } from 'dat.gui';
 import { spriteHorizonRepeating } from './spriteMisc.ts';
@@ -103,22 +103,55 @@ const main = Fn(() => {
   const horizonSprite = spriteHorizonRepeating(spriteTextureNode, p.sub(vec2(negate(gameTime), -0.58)), 1.0)
   finalColour.assign(mix(finalColour, horizonSprite.xyz, horizonSprite.w))
 
-  const obstacleSprite = spriteObstacle(spriteTextureNode, p, gameTime, 1, uniformScore)
-  finalColour.assign(mix(finalColour, obstacleSprite.xyz, obstacleSprite.w))
+  // ===== COLLISION DETECTION: BORDER COLOR APPROACH =====
 
-  // T-Rex with state-based animation
-  const trexSprite = spriteTRex(spriteTextureNode, p.sub(vec2(-2.79, uniformJumpOffsetY.add(-0.41))), 1, uniformTRexState, time)
-  finalColour.assign(mix(finalColour, trexSprite.xyz, trexSprite.w))
+  // Pass 1: Render T-Rex BEHIND obstacles (back layer)
+  const trexPos = p.sub(vec2(-2.79, uniformJumpOffsetY.add(-0.41)))
+  const trexSpriteBack = spriteTRex(spriteTextureNode, trexPos, 1, uniformTRexState, time)
+  const backLayerColor = mix(finalColour, trexSpriteBack.xyz, trexSpriteBack.w)
+
+  // Render obstacles on top of back layer
+  const obstacleSprite = spriteObstacle(spriteTextureNode, p, gameTime, 1, uniformScore)
+  const backLayerWithObstacles = mix(backLayerColor, obstacleSprite.xyz, obstacleSprite.w)
+
+  // Pass 2: Render T-Rex IN FRONT of obstacles (front layer)
+  const trexSpriteFront = spriteTRex(spriteTextureNode, trexPos, 1, uniformTRexState, time)
+  const frontLayerColor = mix(backLayerWithObstacles, trexSpriteFront.xyz, trexSpriteFront.w)
+
+  // Collision detection: Compare back and front layers
+  const colorDifference = backLayerWithObstacles.sub(frontLayerColor).abs()
+  const maxDifference = colorDifference.x.max(colorDifference.y).max(colorDifference.z)
+  const hasCollision = maxDifference.greaterThan(float(0.01)) // Threshold for color difference
+
+  // Apply the front layer as final color
+  finalColour.assign(frontLayerColor)
 
   // Score display - positioned at top right, rightmost digit as reference point
   const scoreSprite = spriteScore(spriteTextureNode, p.sub(vec2(2.83, 0.59)), 0.95, uniformScore, 0)
   // Add score elements on top (UI layer)
   finalColour.assign(mix(finalColour, scoreSprite.xyz, scoreSprite.w))
 
-
   // Apply night mode color inversion
   const invertedColour = vec3(1.0).sub(finalColour)
   finalColour.assign(mix(finalColour, invertedColour, nightProgress))
+
+  // Visual debug: red tint when collision detected
+  const debugCollision = hasCollision.select(float(0.3), float(0))
+  finalColour.assign(mix(finalColour, vec3(1, 0, 0), debugCollision))
+
+  // Dual-pixel collision output (bottom corners)
+  const bottomLeft = p.x.lessThan(float(-2.99)).and(p.y.greaterThan(float(0.74)))
+  const bottomRight = p.x.greaterThan(float(2.99)).and(p.y.greaterThan(float(0.74)))
+  const isCollisionPixel = bottomLeft.or(bottomRight)
+
+  // Write collision state to corner pixels
+  finalColour.assign(
+    select(
+      isCollisionPixel,
+      hasCollision.select(vec3(1, 0, 0), vec3(0, 0, 0)),
+      finalColour
+    )
+  )
 
   return finalColour
 })
@@ -205,34 +238,55 @@ initTRexControls((newState: number) => {
 });
 
 /*
+  ==== COLLISION DETECTION HELPERS ====
+*/
+function detectCollision(): boolean {
+  // TODO: Transfer detected collision state from shader to JS/TS side
+  return false;
+}
+
+/*
   ==== ANIMATION LOOP ====
 */
 const clock = new THREE.Clock()
 let distanceRan = 0; // Track total distance in world units
+let gameOver = false;
 
 function animate() {
   const delta = clock.getDelta();
 
   controls.update();
 
-  // Gradually increase game speed up to the maximum
-  if (options.gameSpeed < GAME_SPEED_MAX) {
-    options.gameSpeed += options.gameSpeedAcceleration * delta;
-    uniformGameSpeed.value = options.gameSpeed;
+  // Only update game state if not crashed
+  if (!gameOver && options.trexState !== TREX_STATE.CRASHED) {
+    // Gradually increase game speed up to the maximum
+    if (options.gameSpeed < GAME_SPEED_MAX) {
+      options.gameSpeed += options.gameSpeedAcceleration * delta;
+      uniformGameSpeed.value = options.gameSpeed;
+    }
+
+    // Calculate distance traveled this frame and update score
+    const distanceDelta = options.gameSpeed * delta;
+    distanceRan += distanceDelta;
+
+    // Convert distance to score using same coefficient as reference
+    const calculatedScore = Math.floor(distanceRan * options.scoreCoefficient);
+    options.score = calculatedScore;
+    uniformScore.value = options.score;
+
+    // Update T-Rex controls (handles input and returns current jump offset)
+    options.jumpOffsetY = controlsTRex(delta);
+    uniformJumpOffsetY.value = options.jumpOffsetY;
+
+    if (detectCollision()) {
+      gameOver = true;
+      options.trexState = TREX_STATE.CRASHED;
+      uniformTRexState.value = TREX_STATE.CRASHED;
+      options.gameSpeed = 0;
+      uniformGameSpeed.value = 0;
+      console.log('GAME OVER! Score:', options.score);
+    }
   }
-
-  // Calculate distance traveled this frame and update score
-  const distanceDelta = options.gameSpeed * delta;
-  distanceRan += distanceDelta;
-
-  // Convert distance to score using same coefficient as reference
-  const calculatedScore = Math.floor(distanceRan * options.scoreCoefficient);
-  options.score = calculatedScore;
-  uniformScore.value = options.score;
-
-  // Update T-Rex controls (handles input and returns current jump offset)
-  options.jumpOffsetY = controlsTRex(delta);
-  uniformJumpOffsetY.value = options.jumpOffsetY;
 
   gui.updateDisplay()
 
