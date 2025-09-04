@@ -21,6 +21,16 @@ const PLANE_WIDTH = 6;
 const PLANE_HEIGHT = 1.5;
 const PLANE_ASPECT_RATIO = PLANE_WIDTH / PLANE_HEIGHT;
 
+// Readback dimensions (pixels) - lower resolution for performance
+const READBACK_WIDTH = 256;
+const READBACK_HEIGHT = Math.floor(READBACK_WIDTH / PLANE_ASPECT_RATIO); // 32 pixels
+const READBACK_DISPLAY_SCALE = 1/3;
+const READBACK_FOCUS_WIDTH_PERCENT = 0.1;
+const READBACK_FOCUS_WIDTH_WORLD = PLANE_WIDTH * READBACK_FOCUS_WIDTH_PERCENT;
+
+// T-Rex position (world coordinates)
+const TREX_X_WORLD = -2.79;
+
 // Camera settings
 const CAMERA_NEAR = 0.1;
 const CAMERA_FAR = 10;
@@ -31,10 +41,7 @@ const GAME_SPEED_START = 3.6;
 const GAME_SPEED_MAX = 7.8;
 const GAME_SPEED_ACCELERATION_DEFAULT = 0.01;
 
-// Readback dimensions (pixels) - lower resolution for performance
-const READBACK_WIDTH = 256;
-const READBACK_HEIGHT = Math.floor(READBACK_WIDTH / PLANE_ASPECT_RATIO);
-const READBACK_DISPLAY_SCALE = 1/2; // Display at 1/3 of plane size
+// Readback settings
 const READBACK_INTERVAL = 0.05; // 50ms = 20 FPS for collision detection
 
 const scene = new THREE.Scene()
@@ -265,18 +272,20 @@ pixelBufferTexture.needsUpdate = true;
 const readbackDisplayMaterial = new THREE.NodeMaterial();
 readbackDisplayMaterial.fragmentNode = texture(pixelBufferTexture);
 
-// Create a small overlay quad to display readback results
+// Create a small overlay quad to display readback results (focused area)
 const readbackDisplayMesh = new THREE.Mesh(
-  new THREE.PlaneGeometry(PLANE_WIDTH * READBACK_DISPLAY_SCALE, PLANE_HEIGHT * READBACK_DISPLAY_SCALE),
+  new THREE.PlaneGeometry(READBACK_FOCUS_WIDTH_WORLD * READBACK_DISPLAY_SCALE, PLANE_HEIGHT * READBACK_DISPLAY_SCALE),
   readbackDisplayMaterial
 );
-readbackDisplayMesh.position.set(0, -(PLANE_HEIGHT * 0.8), 0); // Position below main plane
+// Position below main plane, offset to match T-Rex X position
+readbackDisplayMesh.position.set(TREX_X_WORLD * READBACK_DISPLAY_SCALE, -(PLANE_HEIGHT * 0.8), 0);
 scene.add(readbackDisplayMesh);
 
-// Create an orthographic camera that captures ONLY the plane area
+// Create an orthographic camera that captures focused area around T-Rex
 const readbackCamera = new THREE.OrthographicCamera(
-  -PLANE_WIDTH/2, PLANE_WIDTH/2,     // left, right
-  PLANE_HEIGHT/2, -PLANE_HEIGHT/2,    // top, bottom (note: Y is flipped)
+  TREX_X_WORLD - READBACK_FOCUS_WIDTH_WORLD/2,  // left: focus around T-Rex
+  TREX_X_WORLD + READBACK_FOCUS_WIDTH_WORLD/2,  // right: focus around T-Rex
+  PLANE_HEIGHT/2, -PLANE_HEIGHT/2,              // top, bottom (note: Y is flipped)
   CAMERA_NEAR, CAMERA_FAR
 );
 readbackCamera.position.z = CAMERA_Z;
