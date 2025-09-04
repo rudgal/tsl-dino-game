@@ -140,27 +140,15 @@ const main = Fn(() => {
   finalColour.assign(mix(finalColour, vec3(1, 0, 0), debugCollision))
 
   // Dual-pixel collision output (bottom corners)
-  const bottomLeft = p.x.lessThan(float(-2.99)).and(p.y.greaterThan(float(0.74)))
-  const bottomRight = p.x.greaterThan(float(2.99)).and(p.y.greaterThan(float(0.74)))
+  const bottomLeft = p.x.lessThan(float(-2.9)).and(p.y.lessThan(float(-0.7)))
+  const bottomRight = p.x.greaterThan(float(2.9)).and(p.y.lessThan(float(-0.7)))
   const isCollisionPixel = bottomLeft.or(bottomRight)
 
-  // Write collision state to corner pixels
+  // Write collision state to corner pixels - make them green instead of red for visibility
   finalColour.assign(
     select(
       isCollisionPixel,
-      hasCollision.select(vec3(1, 0, 0), vec3(0, 0, 0)),
-      finalColour
-    )
-  )
-
-  // Add green dotted line at bottom
-  const isBottomLine = p.y.lessThan(float(-0.7))
-  const isDot = p.x.add(gameTime.mul(0.2)).mul(10).mod(2).greaterThan(float(1))
-  const isDottedLine = isBottomLine.and(isDot)
-  finalColour.assign(
-    select(
-      isDottedLine,
-      vec3(0, 1, 0),
+      hasCollision.select(vec3(0, 1, 0), vec3(0, 0, 0)),  // Green when collision, black otherwise
       finalColour
     )
   )
@@ -314,19 +302,27 @@ async function testReadback(): Promise<void> {
     textureData.set(readbackPixelBuffer);
     pixelBufferTexture.needsUpdate = true;
 
-    // Check center pixel at x=0 (which is pixel x=128 in our 256-wide buffer)
-    const centerX = Math.floor(width / 2); // x=128 for width=256
+    // Check collision pixels in bottom corners
+    // Bottom-left corner (x=-2.99 maps to pixel ~4, y=0.74 maps to bottom rows)
+    const leftPixelX = 0; // Far left
+    const rightPixelX = width - 1; // Far right
     const bottomY = height - 1; // Bottom row
-    const pixelIndex = (bottomY * width + centerX) * 4;
 
-    const r = readbackPixelBuffer[pixelIndex] / 255;
-    const g = readbackPixelBuffer[pixelIndex + 1] / 255;
-    const b = readbackPixelBuffer[pixelIndex + 2] / 255;
+    // Check bottom-left collision pixel
+    const leftPixelIndex = (bottomY * width + leftPixelX) * 4;
+    const leftG = readbackPixelBuffer[leftPixelIndex + 1] / 255;
+    const leftIsGreen = leftG > 0.8;
 
-    // Check if this pixel is green
-    const isGreen = g > 0.8 && r < 0.2 && b < 0.2;
+    // Check bottom-right collision pixel
+    const rightPixelIndex = (bottomY * width + rightPixelX) * 4;
+    const rightG = readbackPixelBuffer[rightPixelIndex + 1] / 255;
+    const rightIsGreen = rightG > 0.8;
 
-    console.log(`Center pixel (x=0): ${isGreen ? 'GREEN' : 'not green'}`);
+    const hasCollision = leftIsGreen || rightIsGreen;
+
+    if (hasCollision) {
+      console.log(`COLLISION DETECTED! Left: ${leftIsGreen}, Right: ${rightIsGreen}`);
+    }
 
   } catch (error) {
     console.error('Green line readback failed:', error);
@@ -382,8 +378,8 @@ function animate() {
     }
   }
 
-  // readback every 2 seconds
-  if (clock.getElapsedTime() - lastReadbackTime > 2) {
+  // readback every 100ms to catch collisions
+  if (clock.getElapsedTime() - lastReadbackTime > 0.1) {
     testReadback().catch(console.error);
     lastReadbackTime = clock.getElapsedTime();
   }
