@@ -13,15 +13,39 @@ import { spriteMoon } from './spriteMoon.ts';
 import { spriteStars } from './spriteStars.ts';
 import { spriteObstacle } from './spriteObstacle.ts';
 
+/*
+  ==== CONSTANTS ====
+*/
+// Base plane dimensions (world units)
+const PLANE_WIDTH = 6;
+const PLANE_HEIGHT = 1.5;
+const PLANE_ASPECT_RATIO = PLANE_WIDTH / PLANE_HEIGHT;
+
+// Camera settings
+const CAMERA_NEAR = 0.1;
+const CAMERA_FAR = 10;
+const CAMERA_Z = 2.5;
+
+// Game speed settings
+const GAME_SPEED_START = 3.6;
+const GAME_SPEED_MAX = 7.8;
+const GAME_SPEED_ACCELERATION_DEFAULT = 0.01;
+
+// Readback dimensions (pixels) - lower resolution for performance
+const READBACK_WIDTH = 256;
+const READBACK_HEIGHT = Math.floor(READBACK_WIDTH / PLANE_ASPECT_RATIO);
+const READBACK_DISPLAY_SCALE = 1/2; // Display at 1/3 of plane size
+const READBACK_INTERVAL = 0.05; // 50ms = 20 FPS for collision detection
+
 const scene = new THREE.Scene()
 
 const camera = new THREE.PerspectiveCamera(
   75,
   window.innerWidth / window.innerHeight,
-  0.1,
-  10
+  CAMERA_NEAR,
+  CAMERA_FAR
 )
-camera.position.z = 2.5
+camera.position.z = CAMERA_Z
 
 const renderer = new THREE.WebGPURenderer({alpha: true, antialias: true})
 renderer.setSize(window.innerWidth, window.innerHeight)
@@ -38,11 +62,9 @@ window.addEventListener('resize', () => {
 const controls = new OrbitControls(camera, renderer.domElement)
 controls.enableDamping = true
 
-const GAME_SPEED_START = 3.6;
-const GAME_SPEED_MAX = 7.8;
 const options = {
   gameSpeed: GAME_SPEED_START,
-  gameSpeedAcceleration: 0.01,
+  gameSpeedAcceleration: GAME_SPEED_ACCELERATION_DEFAULT,
   trexState: TREX_STATE.RUNNING as number,
   jumpOffsetY: 0,
   score: 0,
@@ -160,7 +182,7 @@ const material = new THREE.NodeMaterial()
 material.fragmentNode = main()
 material.side = THREE.DoubleSide
 
-const mesh = new THREE.Mesh(new THREE.PlaneGeometry(6, 1.5), material)
+const mesh = new THREE.Mesh(new THREE.PlaneGeometry(PLANE_WIDTH, PLANE_HEIGHT), material)
 scene.add(mesh)
 
 /*
@@ -240,16 +262,15 @@ initTRexControls((newState: number) => {
 /*
   ==== READBACK TESTING ====
 */
-// Higher resolution readback target to capture thin lines
-const readbackTarget = new THREE.RenderTarget(256, 64, {
+// Readback target with optimized resolution
+const readbackTarget = new THREE.RenderTarget(READBACK_WIDTH, READBACK_HEIGHT, {
   format: THREE.RGBAFormat,
   type: THREE.UnsignedByteType
 });
 
 // Create a texture to display readback results
-const readbackDisplaySize = 256;
-const pixelBuffer = new Uint8Array(readbackDisplaySize * 64 * 4).fill(0);
-const pixelBufferTexture = new THREE.DataTexture(pixelBuffer, readbackDisplaySize, 64);
+const pixelBuffer = new Uint8Array(READBACK_WIDTH * READBACK_HEIGHT * 4).fill(0);
+const pixelBufferTexture = new THREE.DataTexture(pixelBuffer, READBACK_WIDTH, READBACK_HEIGHT);
 pixelBufferTexture.type = THREE.UnsignedByteType;
 pixelBufferTexture.format = THREE.RGBAFormat;
 pixelBufferTexture.flipY = true;
@@ -261,19 +282,19 @@ readbackDisplayMaterial.fragmentNode = texture(pixelBufferTexture);
 
 // Create a small overlay quad to display readback results
 const readbackDisplayMesh = new THREE.Mesh(
-  new THREE.PlaneGeometry(2, 0.5),
+  new THREE.PlaneGeometry(PLANE_WIDTH * READBACK_DISPLAY_SCALE, PLANE_HEIGHT * READBACK_DISPLAY_SCALE),
   readbackDisplayMaterial
 );
-readbackDisplayMesh.position.set(0, -1.2, 0); // Position below main plane
+readbackDisplayMesh.position.set(0, -(PLANE_HEIGHT * 0.8), 0); // Position below main plane
 scene.add(readbackDisplayMesh);
 
 // Create an orthographic camera that captures ONLY the plane area
 const readbackCamera = new THREE.OrthographicCamera(
-  -3, 3,     // left, right (matches plane width of 6)
-  0.75, -0.75, // top, bottom (matches plane height of 1.5)
-  0.1, 10
+  -PLANE_WIDTH/2, PLANE_WIDTH/2,     // left, right
+  PLANE_HEIGHT/2, -PLANE_HEIGHT/2,    // top, bottom (note: Y is flipped)
+  CAMERA_NEAR, CAMERA_FAR
 );
-readbackCamera.position.z = 2.5; // Same Z as main camera
+readbackCamera.position.z = CAMERA_Z;
 
 /*
   ==== COLLISION DETECTION HELPERS ====
@@ -378,8 +399,8 @@ function animate() {
     }
   }
 
-  // readback every 100ms to catch collisions
-  if (clock.getElapsedTime() - lastReadbackTime > 0.1) {
+  // readback at specified interval to catch collisions
+  if (clock.getElapsedTime() - lastReadbackTime > READBACK_INTERVAL) {
     testReadback().catch(console.error);
     lastReadbackTime = clock.getElapsedTime();
   }
