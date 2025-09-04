@@ -153,6 +153,16 @@ const main = Fn(() => {
     )
   )
 
+  // Add green line at bottom
+  const isBottomLine = p.y.lessThan(float(-0.7))
+  finalColour.assign(
+    select(
+      isBottomLine,
+      vec3(0, 1, 0),
+      finalColour
+    )
+  )
+
   return finalColour
 })
 
