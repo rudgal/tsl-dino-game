@@ -15,7 +15,7 @@ export const MISC_SPRITES = {
   HORIZON_FLAT: { x: 2, y: 54, width: HORIZON_WIDTH, height: HORIZON_HEIGHT }, // Flat terrain
   HORIZON_BUMPY: { x: 602, y: 54, width: HORIZON_WIDTH, height: HORIZON_HEIGHT }, // Bumpy terrain (offset by 600px)
   RESTART: { x: 2, y: 2, width: 36, height: 32 },
-  TEXT_SPRITE: { x: 655, y: 2, width: 191, height: 11 }, // Contains "GAME OVER" text
+  TEXT_SPRITE: { x: 655, y: 15, width: 191, height: 11 }, // Contains "GAME OVER" text (LDPI - corrected Y coordinate)
 } as const;
 
 // Precomputed dimensions in world units (100px = 1 unit)

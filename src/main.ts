@@ -1,9 +1,9 @@
 import './style.css'
 import * as THREE from 'three/webgpu'
-import { color, float, Fn, mix, negate, positionLocal, texture, time, uniform, vec2, vec3 } from 'three/tsl';
+import { color, float, Fn, If, mix, negate, positionLocal, texture, uniform, vec2, vec3 } from 'three/tsl';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GUI } from 'dat.gui';
-import { spriteHorizonRepeating } from './spriteMisc.ts';
+import { spriteGameOver, spriteHorizonRepeating, spriteRestart } from './spriteMisc.ts';
 import { spriteTRex, TREX_STATE } from './spriteTRex.ts';
 import { controlsTRex, initTRexControls } from './tRexControls.ts';
 import { cloudField } from './spriteCloud.ts';
@@ -24,7 +24,7 @@ const PLANE_ASPECT_RATIO = PLANE_WIDTH / PLANE_HEIGHT;
 // Readback dimensions (pixels) - lower resolution for performance
 const READBACK_WIDTH = 256;
 const READBACK_HEIGHT = Math.floor(READBACK_WIDTH / PLANE_ASPECT_RATIO); // 32 pixels
-const READBACK_DISPLAY_SCALE = 1/3;
+const READBACK_DISPLAY_SCALE = 1 / 3;
 const READBACK_FOCUS_WIDTH_PERCENT = 0.1;
 const READBACK_FOCUS_WIDTH_WORLD = PLANE_WIDTH * READBACK_FOCUS_WIDTH_PERCENT;
 
@@ -72,23 +72,24 @@ controls.enableDamping = true
 const options = {
   gameSpeed: GAME_SPEED_START,
   gameSpeedAcceleration: GAME_SPEED_ACCELERATION_DEFAULT,
-  trexState: TREX_STATE.RUNNING as number,
+  trexState: TREX_STATE.RUNNING as number, // also acts as sort of gameState
   jumpOffsetY: 0,
   score: 0,
   scoreCoefficient: 1.5,
-  // nightMode removed - now calculated in shader based on score
-
+  distanceRan: 0,
   // Reference overlay options
   referenceImage: 'None', //'Reference 01',
   referenceOpacity: 50,
   referenceColorShift: true,
   referenceScale: 88.6
 }
+// Helper function to check if game is over
+const isGameOver = () => options.trexState === TREX_STATE.CRASHED;
 
 /*
   ==== UNIFORMS ====
 */
-const uniformGameSpeed = uniform(options.gameSpeed as number)
+const uniformDistanceRan = uniform(options.distanceRan)
 const uniformTRexState = uniform(options.trexState as number)
 const uniformJumpOffsetY = uniform(options.jumpOffsetY)
 const uniformScore = uniform(options.score)
@@ -108,7 +109,7 @@ const spriteTextureNode = texture(spriteTexture)
 */
 const main = Fn(() => {
   const p = positionLocal.toVar()
-  const gameTime = time.mul(uniformGameSpeed)
+  const gameTime = uniformDistanceRan;
 
   // Calculate night mode data early for moon/stars
   const nightData = calculateNightMode(uniformScore)
@@ -136,7 +137,7 @@ const main = Fn(() => {
 
   // Pass 1: Render T-Rex BEHIND obstacles (back layer)
   const trexPos = p.sub(vec2(-2.79, uniformJumpOffsetY.add(-0.41)))
-  const trexSpriteBack = spriteTRex(spriteTextureNode, trexPos, 1, uniformTRexState, time)
+  const trexSpriteBack = spriteTRex(spriteTextureNode, trexPos, 1, uniformTRexState, gameTime)
   const backLayerColor = mix(finalColour, trexSpriteBack.xyz, trexSpriteBack.w)
 
   // Render obstacles on top of back layer
@@ -144,7 +145,7 @@ const main = Fn(() => {
   const backLayerWithObstacles = mix(backLayerColor, obstacleSprite.xyz, obstacleSprite.w)
 
   // Pass 2: Render T-Rex IN FRONT of obstacles (front layer)
-  const trexSpriteFront = spriteTRex(spriteTextureNode, trexPos, 1, uniformTRexState, time)
+  const trexSpriteFront = spriteTRex(spriteTextureNode, trexPos, 1, uniformTRexState, gameTime)
   const frontLayerColor = mix(backLayerWithObstacles, trexSpriteFront.xyz, trexSpriteFront.w)
 
   // Collision detection: Compare back and front layers
@@ -159,6 +160,20 @@ const main = Fn(() => {
   const scoreSprite = spriteScore(spriteTextureNode, p.sub(vec2(2.83, 0.59)), 0.95, uniformScore, 0)
   // Add score elements on top (UI layer)
   finalColour.assign(mix(finalColour, scoreSprite.xyz, scoreSprite.w))
+
+  // Game Over display when crashed - keep it simple for now
+  const isCrashed = uniformTRexState.equal(float(TREX_STATE.CRASHED))
+
+  // Only overlay game over elements when crashed
+  If(isCrashed, () => {
+    // "GAME OVER" text sprite positioned in center
+    const gameOverSprite = spriteGameOver(spriteTextureNode, p.sub(vec2(0, 0.27)), 1.0)
+    finalColour.assign(mix(finalColour, gameOverSprite.xyz, gameOverSprite.w))
+
+    // Restart symbol positioned below the text
+    const restartSprite = spriteRestart(spriteTextureNode, p.sub(vec2(0, -0.15)), 1)
+    finalColour.assign(mix(finalColour, restartSprite.xyz, restartSprite.w))
+  })
 
   // Apply night mode color inversion
   const invertedColour = vec3(1.0).sub(finalColour)
@@ -181,8 +196,12 @@ scene.add(mesh)
   ==== GUI CONTROLS ====
 */
 const gui = new GUI()
-gui.add(options, 'gameSpeed', 0.5, 10, 0.1).onChange((value: number) => {
-  uniformGameSpeed.value = value
+gui.add(options, 'distanceRan', 0, 10000, 0.1).onChange((value: number) => {
+  uniformDistanceRan.value = value
+})
+
+gui.add(options, 'gameSpeed', 0.5, 10, 0.1).onChange(() => {
+  // Game speed is stored in options but not needed in shader
 })
 
 gui.add(options, 'gameSpeedAcceleration', 0, 0.1, 0.001)
@@ -208,6 +227,7 @@ gui.add(options, 'score', 0, 99999, 1).onChange((value: number) => {
 })
 
 gui.add(options, 'scoreCoefficient', 0.05, 10, 0.05)
+
 
 // Add button to trigger next night mode
 const triggerNextNight = {
@@ -283,9 +303,9 @@ scene.add(readbackDisplayMesh);
 
 // Create an orthographic camera that captures focused area around T-Rex
 const readbackCamera = new THREE.OrthographicCamera(
-  TREX_X_WORLD - READBACK_FOCUS_WIDTH_WORLD/2,  // left: focus around T-Rex
-  TREX_X_WORLD + READBACK_FOCUS_WIDTH_WORLD/2,  // right: focus around T-Rex
-  PLANE_HEIGHT/2, -PLANE_HEIGHT/2,              // top, bottom (note: Y is flipped)
+  TREX_X_WORLD - READBACK_FOCUS_WIDTH_WORLD / 2,  // left: focus around T-Rex
+  TREX_X_WORLD + READBACK_FOCUS_WIDTH_WORLD / 2,  // right: focus around T-Rex
+  PLANE_HEIGHT / 2, -PLANE_HEIGHT / 2,              // top, bottom (note: Y is flipped)
   CAMERA_NEAR, CAMERA_FAR
 );
 readbackCamera.position.z = CAMERA_Z;
@@ -293,57 +313,50 @@ readbackCamera.position.z = CAMERA_Z;
 /*
   ==== COLLISION DETECTION HELPERS ====
 */
-async function testReadback(): Promise<void> {
-  try {
-    // Hide the readback display mesh temporarily to avoid recursion
-    readbackDisplayMesh.visible = false;
+async function readbackAndDetectCollision() {
+  // Hide the readback display mesh temporarily to avoid recursion
+  readbackDisplayMesh.visible = false;
 
-    // Render main scene to readback target using orthographic camera that captures just the plane
-    const originalTarget = renderer.getRenderTarget();
-    renderer.setRenderTarget(readbackTarget);
-    renderer.render(scene, readbackCamera);
-    renderer.setRenderTarget(originalTarget);
+  // Render main scene to readback target using orthographic camera that captures just the plane
+  const originalTarget = renderer.getRenderTarget();
+  renderer.setRenderTarget(readbackTarget);
+  renderer.render(scene, readbackCamera);
+  renderer.setRenderTarget(originalTarget);
 
-    // Show the readback display mesh again
-    readbackDisplayMesh.visible = true;
+  // Show the readback display mesh again
+  readbackDisplayMesh.visible = true;
 
-    // Read back the entire readback target
-    const width = readbackTarget.width;
-    const height = readbackTarget.height;
-    const readbackPixelBuffer = await renderer.readRenderTargetPixelsAsync(readbackTarget, 0, 0, width, height);
+  // Read back the entire readback target
+  const width = readbackTarget.width;
+  const height = readbackTarget.height;
+  const readbackPixelBuffer = await renderer.readRenderTargetPixelsAsync(readbackTarget, 0, 0, width, height);
 
-    // Update the display texture with readback data
-    const textureData = pixelBufferTexture.image.data as Uint8Array;
-    textureData.set(readbackPixelBuffer);
-    pixelBufferTexture.needsUpdate = true;
+  // Update the display texture with readback data
+  const textureData = pixelBufferTexture.image.data as Uint8Array;
+  textureData.set(readbackPixelBuffer);
+  pixelBufferTexture.needsUpdate = true;
 
-    // Check for any red pixels in the readback (collision indicator)
-    let redPixelCount = 0;
+  // Check for any red pixels in the readback (collision indicator)
+  let redPixelCount = 0;
 
-    for (let i = 0; i < readbackPixelBuffer.length; i += 4) {
-      const r = readbackPixelBuffer[i] / 255;
-      const g = readbackPixelBuffer[i + 1] / 255;
-      const b = readbackPixelBuffer[i + 2] / 255;
+  for (let i = 0; i < readbackPixelBuffer.length; i += 4) {
+    const r = readbackPixelBuffer[i] / 255;
+    const g = readbackPixelBuffer[i + 1] / 255;
+    const b = readbackPixelBuffer[i + 2] / 255;
 
-      // Check if this pixel is red (high red, low green and blue)
-      const isRed = r > 0.8 && g < 0.2 && b < 0.2;
+    // Check if this pixel is red (high red, low green and blue)
+    const isRed = r > 0.8 && g < 0.2 && b < 0.2;
 
-      if (isRed) {
-        redPixelCount++;
-      }
+    if (isRed) {
+      redPixelCount++;
     }
-
-    if (redPixelCount > 0) {
-      console.log(`COLLISION DETECTED! Found ${redPixelCount} red pixels`);
-    }
-
-  } catch (error) {
-    console.error('Green line readback failed:', error);
   }
-}
 
-function detectCollision(): boolean {
-  // TODO: Transfer detected collision state from shader to JS/TS side
+  if (redPixelCount > 0) {
+    console.log(`COLLISION DETECTED! Found ${redPixelCount} red pixels`);
+    return true;
+  }
+
   return false;
 }
 
@@ -352,7 +365,6 @@ function detectCollision(): boolean {
 */
 const clock = new THREE.Clock()
 let distanceRan = 0; // Track total distance in world units
-let gameOver = false;
 let lastReadbackTime = 0;
 
 function animate() {
@@ -361,16 +373,19 @@ function animate() {
   controls.update();
 
   // Only update game state if not crashed
-  if (!gameOver && options.trexState !== TREX_STATE.CRASHED) {
+  if (!isGameOver()) {
     // Gradually increase game speed up to the maximum
     if (options.gameSpeed < GAME_SPEED_MAX) {
       options.gameSpeed += options.gameSpeedAcceleration * delta;
-      uniformGameSpeed.value = options.gameSpeed;
     }
 
     // Calculate distance traveled this frame and update score
     const distanceDelta = options.gameSpeed * delta;
     distanceRan += distanceDelta;
+
+    // Update options and uniforms
+    options.distanceRan = distanceRan;
+    uniformDistanceRan.value = options.distanceRan;
 
     // Convert distance to score using same coefficient as reference
     const calculatedScore = Math.floor(distanceRan * options.scoreCoefficient);
@@ -381,19 +396,17 @@ function animate() {
     options.jumpOffsetY = controlsTRex(delta);
     uniformJumpOffsetY.value = options.jumpOffsetY;
 
-    if (detectCollision()) {
-      gameOver = true;
-      options.trexState = TREX_STATE.CRASHED;
-      uniformTRexState.value = TREX_STATE.CRASHED;
-      options.gameSpeed = 0;
-      uniformGameSpeed.value = 0;
-      console.log('GAME OVER! Score:', options.score);
-    }
   }
 
   // readback at specified interval to catch collisions
-  if (clock.getElapsedTime() - lastReadbackTime > READBACK_INTERVAL) {
-    testReadback().catch(console.error);
+  if (!isGameOver() && clock.getElapsedTime() - lastReadbackTime > READBACK_INTERVAL) {
+    readbackAndDetectCollision().then(collision => {
+      if (!collision) return;
+      options.trexState = TREX_STATE.CRASHED;
+      uniformTRexState.value = TREX_STATE.CRASHED;
+      options.gameSpeed = 0;
+      console.log('GAME OVER! Score:', options.score);
+    }).catch(console.error);
     lastReadbackTime = clock.getElapsedTime();
   }
 
