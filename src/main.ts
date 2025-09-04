@@ -1,6 +1,6 @@
 import './style.css'
 import * as THREE from 'three/webgpu'
-import { color, float, Fn, mix, negate, positionLocal, select, texture, time, uniform, vec2, vec3 } from 'three/tsl';
+import { color, float, Fn, mix, negate, positionLocal, texture, time, uniform, vec2, vec3 } from 'three/tsl';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GUI } from 'dat.gui';
 import { spriteHorizonRepeating } from './spriteMisc.ts';
@@ -158,22 +158,7 @@ const main = Fn(() => {
   finalColour.assign(mix(finalColour, invertedColour, nightProgress))
 
   // Visual debug: red tint when collision detected
-  const debugCollision = hasCollision.select(float(0.3), float(0))
-  finalColour.assign(mix(finalColour, vec3(1, 0, 0), debugCollision))
-
-  // Dual-pixel collision output (bottom corners)
-  const bottomLeft = p.x.lessThan(float(-2.9)).and(p.y.lessThan(float(-0.7)))
-  const bottomRight = p.x.greaterThan(float(2.9)).and(p.y.lessThan(float(-0.7)))
-  const isCollisionPixel = bottomLeft.or(bottomRight)
-
-  // Write collision state to corner pixels - make them green instead of red for visibility
-  finalColour.assign(
-    select(
-      isCollisionPixel,
-      hasCollision.select(vec3(0, 1, 0), vec3(0, 0, 0)),  // Green when collision, black otherwise
-      finalColour
-    )
-  )
+  finalColour.assign(hasCollision.select(vec3(1.0, 0, 0), finalColour))
 
   return finalColour
 })
@@ -323,26 +308,24 @@ async function testReadback(): Promise<void> {
     textureData.set(readbackPixelBuffer);
     pixelBufferTexture.needsUpdate = true;
 
-    // Check collision pixels in bottom corners
-    // Bottom-left corner (x=-2.99 maps to pixel ~4, y=0.74 maps to bottom rows)
-    const leftPixelX = 0; // Far left
-    const rightPixelX = width - 1; // Far right
-    const bottomY = height - 1; // Bottom row
+    // Check for any red pixels in the readback (collision indicator)
+    let redPixelCount = 0;
 
-    // Check bottom-left collision pixel
-    const leftPixelIndex = (bottomY * width + leftPixelX) * 4;
-    const leftG = readbackPixelBuffer[leftPixelIndex + 1] / 255;
-    const leftIsGreen = leftG > 0.8;
+    for (let i = 0; i < readbackPixelBuffer.length; i += 4) {
+      const r = readbackPixelBuffer[i] / 255;
+      const g = readbackPixelBuffer[i + 1] / 255;
+      const b = readbackPixelBuffer[i + 2] / 255;
 
-    // Check bottom-right collision pixel
-    const rightPixelIndex = (bottomY * width + rightPixelX) * 4;
-    const rightG = readbackPixelBuffer[rightPixelIndex + 1] / 255;
-    const rightIsGreen = rightG > 0.8;
+      // Check if this pixel is red (high red, low green and blue)
+      const isRed = r > 0.8 && g < 0.2 && b < 0.2;
 
-    const hasCollision = leftIsGreen || rightIsGreen;
+      if (isRed) {
+        redPixelCount++;
+      }
+    }
 
-    if (hasCollision) {
-      console.log(`COLLISION DETECTED! Left: ${leftIsGreen}, Right: ${rightIsGreen}`);
+    if (redPixelCount > 0) {
+      console.log(`COLLISION DETECTED! Found ${redPixelCount} red pixels`);
     }
 
   } catch (error) {
