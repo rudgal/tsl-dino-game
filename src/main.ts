@@ -238,8 +238,69 @@ initTRexControls((newState: number) => {
 });
 
 /*
+  ==== READBACK TESTING ====
+*/
+// small render target for testing readback
+const readbackTarget = new THREE.RenderTarget(2, 2, {
+  format: THREE.RGBAFormat,
+  type: THREE.FloatType
+});
+
+// Simple test material that writes time values to specific pixels
+const readbackTestMaterial = new THREE.NodeMaterial();
+const readbackTestFn = Fn(() => {
+  const timeValue = time.mul(0.1).mod(1.0); // cycle every 10 seconds
+  const halfTime = timeValue.mul(0.5);
+  const quarterTime = timeValue.mul(0.25);
+
+  return vec3(timeValue, halfTime, quarterTime);
+});
+
+readbackTestMaterial.fragmentNode = readbackTestFn();
+
+const readbackTestMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), readbackTestMaterial);
+
+const readbackScene = new THREE.Scene();
+readbackScene.add(readbackTestMesh);
+
+const readbackCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10);
+readbackCamera.position.z = 1;
+
+/*
   ==== COLLISION DETECTION HELPERS ====
 */
+async function testReadback(): Promise<void> {
+  try {
+    // Render to readback target
+    const originalTarget = renderer.getRenderTarget();
+    renderer.setRenderTarget(readbackTarget);
+    renderer.render(readbackScene, readbackCamera);
+    renderer.setRenderTarget(originalTarget);
+
+    // Read back just 1 pixel to avoid WebGPU alignment issues
+    // We'll read the bottom-left pixel which contains our time value
+    const pixelBuffer = await renderer.readRenderTargetPixelsAsync(readbackTarget, 0, 0, 1, 1);
+
+    // Parse the single pixel (RGBA format)
+    // This pixel contains: timeValue in red channel
+    const timeValue = pixelBuffer[0]; // R channel
+    const debugG = pixelBuffer[1]; // G channel (should be 0)
+    const debugB = pixelBuffer[2]; // B channel (should be 0)
+    const debugA = pixelBuffer[3]; // A channel
+
+    console.log('Readback Test (DEBUG - all time):', {
+      R_time: timeValue.toFixed(3),
+      G_halfTime: debugG.toFixed(3),
+      B_quarterTime: debugB.toFixed(3),
+      A_alpha: debugA.toFixed(3),
+      expectedTime: ((performance.now() * 0.001 * 0.1) % 1).toFixed(3)
+    });
+
+  } catch (error) {
+    console.error('Readback failed:', error);
+  }
+}
+
 function detectCollision(): boolean {
   // TODO: Transfer detected collision state from shader to JS/TS side
   return false;
@@ -251,6 +312,7 @@ function detectCollision(): boolean {
 const clock = new THREE.Clock()
 let distanceRan = 0; // Track total distance in world units
 let gameOver = false;
+let lastReadbackTime = 0;
 
 function animate() {
   const delta = clock.getDelta();
@@ -286,6 +348,12 @@ function animate() {
       uniformGameSpeed.value = 0;
       console.log('GAME OVER! Score:', options.score);
     }
+  }
+
+  // readback every 2 seconds
+  if (clock.getElapsedTime() - lastReadbackTime > 2) {
+    testReadback().catch(console.error);
+    lastReadbackTime = clock.getElapsedTime();
   }
 
   gui.updateDisplay()
