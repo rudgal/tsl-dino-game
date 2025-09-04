@@ -153,11 +153,13 @@ const main = Fn(() => {
     )
   )
 
-  // Add green line at bottom
+  // Add green dotted line at bottom
   const isBottomLine = p.y.lessThan(float(-0.7))
+  const isDot = p.x.add(gameTime.mul(0.5)).mul(10).mod(2).greaterThan(float(1))
+  const isDottedLine = isBottomLine.and(isDot)
   finalColour.assign(
     select(
-      isBottomLine,
+      isDottedLine,
       vec3(0, 1, 0),
       finalColour
     )
