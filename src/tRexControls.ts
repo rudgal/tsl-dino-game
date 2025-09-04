@@ -18,11 +18,19 @@ let reachedMinHeight = false;
 let speedDrop = false;
 let jumpOffsetY = 0;
 
-// Callback to update trex state
+// Callbacks
 let onStateChange: ((state: number) => void) | null = null;
+let getCurrentState: (() => number) | null = null;
+let onRestart: (() => void) | null = null;
 
-export function initTRexControls(stateChangeCallback: (state: number) => void) {
-  onStateChange = stateChangeCallback;
+export function initTRexControls(
+  tRexStateChangeCallback: (state: number) => void,
+  getCurrentTRexStateCallback?: () => number,
+  restartGameCallback?: () => void
+) {
+  onStateChange = tRexStateChangeCallback;
+  getCurrentState = getCurrentTRexStateCallback || null;
+  onRestart = restartGameCallback || null;
 
   // Set up single consolidated event handlers
   document.addEventListener('keydown', onKeyDown);
@@ -32,6 +40,30 @@ export function initTRexControls(stateChangeCallback: (state: number) => void) {
 function onKeyDown(e: KeyboardEvent) {
   if (e.code === 'Space' || e.code === 'ArrowUp') {
     e.preventDefault();
+    
+    // Check current state
+    const currentState = getCurrentState ? getCurrentState() : TREX_STATE.RUNNING;
+    
+    // If crashed, restart the game
+    if (currentState === TREX_STATE.CRASHED) {
+      if (onRestart) {
+        // Reset T-Rex controls state before restarting game
+        resetTRexControls();
+        onRestart();
+      }
+      return;
+    }
+    
+    // If waiting, transition to running (game start)
+    if (currentState === TREX_STATE.WAITING) {
+      if (onStateChange) {
+        onStateChange(TREX_STATE.RUNNING);
+      }
+      // Don't jump on first press when starting the game
+      return;
+    }
+    
+    // Normal jump during gameplay
     startJump();
   } else if (e.code === 'ArrowDown') {
     if (jumping) {
@@ -93,6 +125,15 @@ export function setDuck(isDucking: boolean) {
       onStateChange(TREX_STATE.RUNNING);
     }
   }
+}
+
+function resetTRexControls() {
+  jumping = false;
+  ducking = false;
+  jumpVelocity = 0;
+  reachedMinHeight = false;
+  speedDrop = false;
+  jumpOffsetY = 0;
 }
 
 export function controlsTRex(deltaTimeSeconds: number): number {

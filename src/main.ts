@@ -72,7 +72,7 @@ controls.enableDamping = true
 const options = {
   gameSpeed: GAME_SPEED_START,
   gameSpeedAcceleration: GAME_SPEED_ACCELERATION_DEFAULT,
-  trexState: TREX_STATE.RUNNING as number, // also acts as sort of gameState
+  trexState: TREX_STATE.WAITING as number, // also acts as sort of gameState
   jumpOffsetY: 0,
   score: 0,
   scoreCoefficient: 1.5,
@@ -83,8 +83,9 @@ const options = {
   referenceColorShift: true,
   referenceScale: 88.6
 }
-// Helper function to check if game is over
+// Helper functions to check game state
 const isGameOver = () => options.trexState === TREX_STATE.CRASHED;
+const isGameRunning = () => options.trexState !== TREX_STATE.WAITING && options.trexState !== TREX_STATE.CRASHED;
 
 /*
   ==== UNIFORMS ====
@@ -192,6 +193,10 @@ material.side = THREE.DoubleSide
 const mesh = new THREE.Mesh(new THREE.PlaneGeometry(PLANE_WIDTH, PLANE_HEIGHT), material)
 scene.add(mesh)
 
+// Raycaster for click detection
+const raycaster = new THREE.Raycaster()
+const mouse = new THREE.Vector2()
+
 /*
   ==== GUI CONTROLS ====
 */
@@ -266,10 +271,56 @@ referenceFolder.add(options, 'referenceScale', 25, 200, 1).name('Scale %').onCha
 updateReferenceImage()
 
 // Initialize T-Rex controls
-initTRexControls((newState: number) => {
-  options.trexState = newState;
+initTRexControls(
+  (newState: number) => {
+    options.trexState = newState;
+    uniformTRexState.value = options.trexState;
+  },
+  () => options.trexState,
+  gameRestart
+);
+
+// Game restart function
+function gameRestart() {
+  console.log('Restarting game.');
+
+  // Reset game state variables
+  options.distanceRan = 0;
+  options.gameSpeed = GAME_SPEED_START;
+  options.score = 0;
+  options.jumpOffsetY = 0;
+  options.trexState = TREX_STATE.RUNNING; // Start running immediately after restart
+
+  // Update uniforms
+  uniformDistanceRan.value = options.distanceRan;
+  uniformScore.value = options.score;
+  uniformJumpOffsetY.value = options.jumpOffsetY;
   uniformTRexState.value = options.trexState;
-});
+
+  // Reset distance counter
+  distanceRan = 0;
+}
+
+// Mouse click handler for restart
+function onMouseClick(event: MouseEvent) {
+  // Only handle clicks when game is over
+  if (!isGameOver()) return;
+
+  // Convert mouse coordinates to normalized device coordinates
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  // Update raycaster
+  raycaster.setFromCamera(mouse, camera);
+
+  // Check for intersection with the plane
+  const intersects = raycaster.intersectObject(mesh);
+
+  if (intersects.length > 0) {
+    gameRestart();
+  }
+}
+renderer.domElement.addEventListener('click', onMouseClick);
 
 /*
   ==== READBACK TESTING ====
@@ -372,8 +423,8 @@ function animate() {
 
   controls.update();
 
-  // Only update game state if not crashed
-  if (!isGameOver()) {
+  // Only update game state if game is running (not waiting or crashed)
+  if (isGameRunning()) {
     // Gradually increase game speed up to the maximum
     if (options.gameSpeed < GAME_SPEED_MAX) {
       options.gameSpeed += options.gameSpeedAcceleration * delta;
@@ -391,15 +442,16 @@ function animate() {
     const calculatedScore = Math.floor(distanceRan * options.scoreCoefficient);
     options.score = calculatedScore;
     uniformScore.value = options.score;
-
-    // Update T-Rex controls (handles input and returns current jump offset)
-    options.jumpOffsetY = controlsTRex(delta);
-    uniformJumpOffsetY.value = options.jumpOffsetY;
-
   }
 
-  // readback at specified interval to catch collisions
-  if (!isGameOver() && clock.getElapsedTime() - lastReadbackTime > READBACK_INTERVAL) {
+  // Always update T-Rex controls (for jump handling even when waiting)
+  if (!isGameOver()) {
+    options.jumpOffsetY = controlsTRex(delta);
+    uniformJumpOffsetY.value = options.jumpOffsetY;
+  }
+
+  // readback at specified interval to catch collisions (only when game is running)
+  if (isGameRunning() && clock.getElapsedTime() - lastReadbackTime > READBACK_INTERVAL) {
     readbackAndDetectCollision().then(collision => {
       if (!collision) return;
       options.trexState = TREX_STATE.CRASHED;
