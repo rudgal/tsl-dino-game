@@ -155,7 +155,7 @@ const main = Fn(() => {
 
   // Add green dotted line at bottom
   const isBottomLine = p.y.lessThan(float(-0.7))
-  const isDot = p.x.add(gameTime.mul(0.5)).mul(10).mod(2).greaterThan(float(1))
+  const isDot = p.x.add(gameTime.mul(0.2)).mul(10).mod(2).greaterThan(float(1))
   const isDottedLine = isBottomLine.and(isDot)
   finalColour.assign(
     select(
@@ -252,64 +252,84 @@ initTRexControls((newState: number) => {
 /*
   ==== READBACK TESTING ====
 */
-// small render target for testing readback
-const readbackTarget = new THREE.RenderTarget(2, 2, {
+// Higher resolution readback target to capture thin lines
+const readbackTarget = new THREE.RenderTarget(256, 64, {
   format: THREE.RGBAFormat,
-  type: THREE.FloatType
+  type: THREE.UnsignedByteType
 });
 
-// Simple test material that writes time values to specific pixels
-const readbackTestMaterial = new THREE.NodeMaterial();
-const readbackTestFn = Fn(() => {
-  const timeValue = time.mul(0.1).mod(1.0); // cycle every 10 seconds
-  const halfTime = timeValue.mul(0.5);
-  const quarterTime = timeValue.mul(0.25);
+// Create a texture to display readback results
+const readbackDisplaySize = 256;
+const pixelBuffer = new Uint8Array(readbackDisplaySize * 64 * 4).fill(0);
+const pixelBufferTexture = new THREE.DataTexture(pixelBuffer, readbackDisplaySize, 64);
+pixelBufferTexture.type = THREE.UnsignedByteType;
+pixelBufferTexture.format = THREE.RGBAFormat;
+pixelBufferTexture.flipY = true;
+pixelBufferTexture.needsUpdate = true;
 
-  return vec3(timeValue, halfTime, quarterTime);
-});
+// Material to display the readback texture
+const readbackDisplayMaterial = new THREE.NodeMaterial();
+readbackDisplayMaterial.fragmentNode = texture(pixelBufferTexture);
 
-readbackTestMaterial.fragmentNode = readbackTestFn();
+// Create a small overlay quad to display readback results
+const readbackDisplayMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(2, 0.5),
+  readbackDisplayMaterial
+);
+readbackDisplayMesh.position.set(0, -1.2, 0); // Position below main plane
+scene.add(readbackDisplayMesh);
 
-const readbackTestMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), readbackTestMaterial);
-
-const readbackScene = new THREE.Scene();
-readbackScene.add(readbackTestMesh);
-
-const readbackCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10);
-readbackCamera.position.z = 1;
+// Create an orthographic camera that captures ONLY the plane area
+const readbackCamera = new THREE.OrthographicCamera(
+  -3, 3,     // left, right (matches plane width of 6)
+  0.75, -0.75, // top, bottom (matches plane height of 1.5)
+  0.1, 10
+);
+readbackCamera.position.z = 2.5; // Same Z as main camera
 
 /*
   ==== COLLISION DETECTION HELPERS ====
 */
 async function testReadback(): Promise<void> {
   try {
-    // Render to readback target
+    // Hide the readback display mesh temporarily to avoid recursion
+    readbackDisplayMesh.visible = false;
+
+    // Render main scene to readback target using orthographic camera that captures just the plane
     const originalTarget = renderer.getRenderTarget();
     renderer.setRenderTarget(readbackTarget);
-    renderer.render(readbackScene, readbackCamera);
+    renderer.render(scene, readbackCamera);
     renderer.setRenderTarget(originalTarget);
 
-    // Read back just 1 pixel to avoid WebGPU alignment issues
-    // We'll read the bottom-left pixel which contains our time value
-    const pixelBuffer = await renderer.readRenderTargetPixelsAsync(readbackTarget, 0, 0, 1, 1);
+    // Show the readback display mesh again
+    readbackDisplayMesh.visible = true;
 
-    // Parse the single pixel (RGBA format)
-    // This pixel contains: timeValue in red channel
-    const timeValue = pixelBuffer[0]; // R channel
-    const debugG = pixelBuffer[1]; // G channel (should be 0)
-    const debugB = pixelBuffer[2]; // B channel (should be 0)
-    const debugA = pixelBuffer[3]; // A channel
+    // Read back the entire readback target
+    const width = readbackTarget.width;
+    const height = readbackTarget.height;
+    const readbackPixelBuffer = await renderer.readRenderTargetPixelsAsync(readbackTarget, 0, 0, width, height);
 
-    console.log('Readback Test (DEBUG - all time):', {
-      R_time: timeValue.toFixed(3),
-      G_halfTime: debugG.toFixed(3),
-      B_quarterTime: debugB.toFixed(3),
-      A_alpha: debugA.toFixed(3),
-      expectedTime: ((performance.now() * 0.001 * 0.1) % 1).toFixed(3)
-    });
+    // Update the display texture with readback data
+    const textureData = pixelBufferTexture.image.data as Uint8Array;
+    textureData.set(readbackPixelBuffer);
+    pixelBufferTexture.needsUpdate = true;
+
+    // Check center pixel at x=0 (which is pixel x=128 in our 256-wide buffer)
+    const centerX = Math.floor(width / 2); // x=128 for width=256
+    const bottomY = height - 1; // Bottom row
+    const pixelIndex = (bottomY * width + centerX) * 4;
+
+    const r = readbackPixelBuffer[pixelIndex] / 255;
+    const g = readbackPixelBuffer[pixelIndex + 1] / 255;
+    const b = readbackPixelBuffer[pixelIndex + 2] / 255;
+
+    // Check if this pixel is green
+    const isGreen = g > 0.8 && r < 0.2 && b < 0.2;
+
+    console.log(`Center pixel (x=0): ${isGreen ? 'GREEN' : 'not green'}`);
 
   } catch (error) {
-    console.error('Readback failed:', error);
+    console.error('Green line readback failed:', error);
   }
 }
 
