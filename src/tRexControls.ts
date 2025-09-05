@@ -23,6 +23,8 @@ let onStateChange: ((state: number) => void) | null = null;
 let getCurrentState: (() => number) | null = null;
 let onRestart: (() => void) | null = null;
 
+const getState = (): number => getCurrentState?.() ?? TREX_STATE.RUNNING;
+
 export function initTRexControls(
   tRexStateChangeCallback: (state: number) => void,
   getCurrentTRexStateCallback?: () => number,
@@ -40,10 +42,10 @@ export function initTRexControls(
 function onKeyDown(e: KeyboardEvent) {
   if (e.code === 'Space' || e.code === 'ArrowUp') {
     e.preventDefault();
-    
+
     // Check current state
-    const currentState = getCurrentState ? getCurrentState() : TREX_STATE.RUNNING;
-    
+    const currentState = getState();
+
     // If crashed, restart the game
     if (currentState === TREX_STATE.CRASHED) {
       if (onRestart) {
@@ -53,7 +55,7 @@ function onKeyDown(e: KeyboardEvent) {
       }
       return;
     }
-    
+
     // If waiting, transition to running (game start)
     if (currentState === TREX_STATE.WAITING) {
       if (onStateChange) {
@@ -62,10 +64,12 @@ function onKeyDown(e: KeyboardEvent) {
       // Don't jump on first press when starting the game
       return;
     }
-    
+
     // Normal jump during gameplay
     startJump();
   } else if (e.code === 'ArrowDown') {
+    if (getState() === TREX_STATE.CRASHED) return; // no duck when crashed
+
     if (jumping) {
       // Speed drop during jump
       setSpeedDrop();
@@ -82,6 +86,8 @@ function onKeyUp(e: KeyboardEvent) {
       endJump();
     }
   } else if (e.code === 'ArrowDown') {
+    if (getState() === TREX_STATE.CRASHED) return; // no duck when crashed
+
     // Stop speed drop and ducking
     speedDrop = false;
     setDuck(false);
