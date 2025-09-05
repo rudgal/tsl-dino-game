@@ -1,6 +1,7 @@
-import { TREX_STATE } from './spriteTRex.ts';
 
 // Jump physics constants (units per second)
+import { TREX_STATE } from './tsl/tslTRex.ts';
+
 const JUMP_PHYSICS = {
   INITIAL_JUMP_VELOCITY: 4.0,   // positive = upward (units/second)
   GRAVITY: -9.0,                // negative = downward acceleration (units/second²)

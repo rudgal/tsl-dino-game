@@ -3,7 +3,7 @@
  */
 
 import { Fn, texture, vec2, vec4, select, float } from 'three/tsl';
-import type { FnArguments } from './types.ts';
+import type { FnArguments } from '../types.ts';
 
 // Sprite sheet dimensions (LDPI version)
 export const SPRITE_SHEET_WIDTH = 1233 as const;

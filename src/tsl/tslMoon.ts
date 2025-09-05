@@ -1,11 +1,11 @@
 /**
- * Moon sprite for night mode
+ * Moon TSL utilities for night mode
  * Displays different moon phases based on night count
  */
 
 import { array, float, Fn, int, mod, vec2, vec4 } from 'three/tsl';
-import type { FnArguments } from './types.ts';
-import { sampleSprite } from './spriteUtils.ts';
+import type { FnArguments } from '../types.ts';
+import { sampleSprite } from './tslSpriteUtils.ts';
 
 // Moon sprite coordinates (LDPI version from extract script)
 export const MOON_SPRITES = {
@@ -15,7 +15,7 @@ export const MOON_SPRITES = {
 export const MOON_SPEED = 0.08;
 const MOON_PHASES_X_OFFSET = array([float(140), float(120), float(100), float(60), float(40), float(20), float(0)]);
 
-export const spriteMoon = Fn(([spriteTexture, p, gameTime, nightData]: FnArguments) => {
+export const tslMoon = Fn(([spriteTexture, p, gameTime, nightData]: FnArguments) => {
   const nightProgress = nightData.x;
   const nightCount = nightData.y;
 

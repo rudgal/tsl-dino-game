@@ -3,9 +3,9 @@
  */
 
 import { float, floor, Fn, fract, mod, select, sin, vec2, vec4 } from 'three/tsl';
-import type { FnArguments } from './types.ts';
-import { spriteCactusLarge, spriteCactusSmall } from './spriteCactus.ts';
-import { spritePterodactyl } from './spritePterodactyl.ts';
+import type { FnArguments } from '../types.ts';
+import { tslCactusLarge, tslCactusSmall } from './tslCactus.ts';
+import { tslPterodactyl } from './tslPterodactyl.ts';
 
 
 // Obstacle spawn configuration
@@ -34,7 +34,7 @@ export const OBSTACLE_CONFIG = {
 };
 
 
-export const spriteObstacle = Fn(([spriteTexture, p, gameTime, scale, currentScore]: FnArguments) => {
+export const tslObstacle = Fn(([spriteTexture, p, gameTime, scale, currentScore]: FnArguments) => {
   // Base spacing between obstacle opportunities
   const obstacleSpacing = float(OBSTACLE_CONFIG.SEGMENT_SPACING);
 
@@ -88,9 +88,9 @@ export const spriteObstacle = Fn(([spriteTexture, p, gameTime, scale, currentSco
   const animationFrame = mod(gameTime.mul(float(OBSTACLE_CONFIG.PTERODACTYL_WING_SPEED)), 2);
 
   // Render all obstacle types
-  const smallCactusSprite = spriteCactusSmall(spriteTexture, adjustedPos, scale, obstacleVariant);
-  const largeCactusSprite = spriteCactusLarge(spriteTexture, adjustedPos, scale, obstacleVariant);
-  const pterodactylSprite = spritePterodactyl(spriteTexture, adjustedPos, scale, animationFrame);
+  const smallCactusSprite = tslCactusSmall(spriteTexture, adjustedPos, scale, obstacleVariant);
+  const largeCactusSprite = tslCactusLarge(spriteTexture, adjustedPos, scale, obstacleVariant);
+  const pterodactylSprite = tslPterodactyl(spriteTexture, adjustedPos, scale, animationFrame);
 
   // Select which sprite to show based on current obstacle type
   const selectedSprite = select(

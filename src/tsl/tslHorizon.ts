@@ -1,11 +1,11 @@
 /**
- * Horizon sprite utilities for TSL shader system
- * Contains flat and bumpy terrain sprites with repeating functionality
+ * Horizon TSL utilities for TSL shader system
+ * Contains flat and bumpy terrain with repeating functionality
  */
 
 import { float, Fn, mod, select, texture, vec2, vec4, floor, mix } from 'three/tsl';
-import type { FnArguments } from './types.ts';
-import { PIXELS_PER_UNIT, SPRITE_SHEET_HEIGHT, SPRITE_SHEET_WIDTH } from './spriteUtils.ts';
+import type { FnArguments } from '../types.ts';
+import { PIXELS_PER_UNIT, SPRITE_SHEET_HEIGHT, SPRITE_SHEET_WIDTH } from './tslSpriteUtils.ts';
 
 export const HORIZON_WIDTH = 600 as const;
 export const HORIZON_HEIGHT = 12 as const;
@@ -20,7 +20,7 @@ export const HORIZON_SPRITES = {
 export const HORIZON_WIDTH_UNITS = HORIZON_SPRITES.HORIZON_BUMPY.width / PIXELS_PER_UNIT; // 6 units
 export const HORIZON_HEIGHT_UNITS = HORIZON_SPRITES.HORIZON_BUMPY.height / PIXELS_PER_UNIT; // 0.12 units
 
-export const spriteHorizonRepeating = Fn(([spriteTexture, p, scale]: FnArguments) => {
+export const tslHorizonRepeating = Fn(([spriteTexture, p, scale]: FnArguments) => {
   // Use precomputed constants
   const spriteWidthUnits = float(HORIZON_WIDTH_UNITS);
   const spriteHeightUnits = float(HORIZON_HEIGHT_UNITS);

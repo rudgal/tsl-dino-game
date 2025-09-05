@@ -1,10 +1,10 @@
 /**
- * T-Rex sprite utilities for TSL shader system
+ * T-Rex TSL utilities for TSL shader system
  */
 
 import { float, floor, Fn, hash, mix, mod, select, vec2 } from 'three/tsl';
-import type { FnArguments } from './types.ts';
-import { sampleSprite } from './spriteUtils.ts';
+import type { FnArguments } from '../types.ts';
+import { sampleSprite } from './tslSpriteUtils.ts';
 
 // T-Rex states (matching Chrome dino game)
 export const TREX_STATE = {
@@ -54,7 +54,7 @@ export const TREX_SPRITES = {
 };
 
 
-export const spriteTRex = Fn(([spriteTexture, p, scale, state, animTime]: FnArguments) => {
+export const tslTRex = Fn(([spriteTexture, p, scale, state, animTime]: FnArguments) => {
   // Calculate frame index based on state and animation time
   const float2 = float(2);
   const runningFrame = mod(floor(animTime.mul(float(TREX_ANIMATION_SPEED.RUNNING_FPS))), float2);

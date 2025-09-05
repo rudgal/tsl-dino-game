@@ -1,11 +1,11 @@
 /**
- * Cloud sprite utilities for TSL shader system
+ * Cloud TSL utilities for TSL shader system
  * Hash-based procedural cloud generation for performance
  */
 
 import { float, floor, Fn, select, sin, vec2, vec4 } from 'three/tsl';
-import type { FnArguments } from './types.ts';
-import { sampleSprite } from './spriteUtils.ts';
+import type { FnArguments } from '../types.ts';
+import { sampleSprite } from './tslSpriteUtils.ts';
 
 // Cloud sprite coordinates from original Chrome game (LDPI version)
 export const CLOUD_SPRITE = {
@@ -54,7 +54,7 @@ const BACKGROUND_SPEED = float(CLOUD_CONFIG.BACKGROUND_SPEED);
  * Procedural cloud field generation using hash-based positioning
  * Creates infinite scrolling cloud layer with pseudo-random distribution
  */
-export const cloudField = Fn(([spriteTexture, position, gameTime, scale]: [any, any, any, any]) => {
+export const tslCloudField = Fn(([spriteTexture, position, gameTime, scale]: [any, any, any, any]) => {
   // Apply parallax scrolling (clouds move slower than ground)
   const scrollOffset = gameTime.mul(BACKGROUND_SPEED);
   const worldX = position.x.add(scrollOffset);
@@ -74,7 +74,7 @@ export const cloudField = Fn(([spriteTexture, position, gameTime, scale]: [any, 
   const localY = position.y.add(yOffset); // Fixed: was .sub(yOffset)
 
   // Sample cloud sprite at calculated position
-  const cloudColor = spriteCloud(spriteTexture, vec2(localX, localY), scale);
+  const cloudColor = tslCloud(spriteTexture, vec2(localX, localY), scale);
 
   // Return cloud if it exists at this grid position, transparent otherwise
   return select(cloudExists, cloudColor, vec4(0, 0, 0, 0));
@@ -83,7 +83,7 @@ export const cloudField = Fn(([spriteTexture, position, gameTime, scale]: [any, 
 /**
  * Individual cloud sprite sampling
  */
-export const spriteCloud = Fn(([spriteTexture, p, scale]: FnArguments) => {
+export const tslCloud = Fn(([spriteTexture, p, scale]: FnArguments) => {
   return sampleSprite(
     spriteTexture, p, scale,
     float(CLOUD_SPRITE.x),
@@ -92,5 +92,3 @@ export const spriteCloud = Fn(([spriteTexture, p, scale]: FnArguments) => {
     float(CLOUD_SPRITE.height)
   );
 });
-
-

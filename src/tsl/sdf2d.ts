@@ -27,7 +27,7 @@ import {
   vec2,
   vec3
 } from 'three/tsl';
-import type { FnArguments } from './types.ts';
+import type { FnArguments } from '../types.ts';
 
 // Helper functions
 const dot2 = (v: any) => dot(v, v);

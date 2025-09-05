@@ -1,12 +1,12 @@
 /**
- * Stars sprite for night mode
+ * Stars TSL utilities for night mode
  * Displays stars with pseudo-random positioning based on night count
  */
 
 import { float, Fn, fract, mix, mod, sin, vec2, vec4 } from 'three/tsl';
-import type { FnArguments } from './types.ts';
-import { sampleSprite } from './spriteUtils.ts';
-import { MOON_SPEED } from './spriteMoon.ts';
+import type { FnArguments } from '../types.ts';
+import { sampleSprite } from './tslSpriteUtils.ts';
+import { MOON_SPEED } from './tslMoon.ts';
 
 const STAR_SIZE = 9; // pixels (9x9)
 const STAR_SPRITE_X = 645; // X position for star sprites
@@ -22,7 +22,7 @@ const hash = Fn(([n]: FnArguments) => {
   return fract(sin(n).mul(43758.5453));
 });
 
-export const spriteStars = Fn(([spriteTexture, p, gameTime, nightData]: FnArguments) => {
+export const tslStars = Fn(([spriteTexture, p, gameTime, nightData]: FnArguments) => {
   const nightProgress = nightData.x;
   const nightCount = nightData.y;
 

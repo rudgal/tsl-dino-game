@@ -1,11 +1,11 @@
 /**
- * Score sprite utilities for TSL shader system
+ * Score TSL utilities for TSL shader system
  * Contains digit sprites for score display
  */
 
 import { abs, float, Fn, int, Loop, mix, select, vec2, vec4 } from 'three/tsl';
-import type { FnArguments } from './types.ts';
-import { PIXELS_PER_UNIT, sampleSprite } from './spriteUtils.ts';
+import type { FnArguments } from '../types.ts';
+import { PIXELS_PER_UNIT, sampleSprite } from './tslSpriteUtils.ts';
 
 export const DIGIT_WIDTH = 10 as const;
 export const DIGIT_HEIGHT = 13 as const;
@@ -20,7 +20,7 @@ export const SCORE_SPRITES = {
 export const DIGIT_WIDTH_UNITS = DIGIT_WIDTH / PIXELS_PER_UNIT;
 export const DIGIT_HEIGHT_UNITS = DIGIT_HEIGHT / PIXELS_PER_UNIT;
 
-export const spriteDigit = Fn(([spriteTexture, p, scale, digitValue]: FnArguments) => {
+export const tslDigit = Fn(([spriteTexture, p, scale, digitValue]: FnArguments) => {
   // Convert digitValue to int and clamp to valid range (0-9)
   const clampedDigit = int(digitValue).clamp(0, 9);
 
@@ -39,7 +39,7 @@ export const spriteDigit = Fn(([spriteTexture, p, scale, digitValue]: FnArgument
 
 // HI text is at positions 10 and 11 in the horizontal digit layout
 const START_POSITION_HI = 10;
-export const spriteHiText = Fn(([spriteTexture, p, scale]: FnArguments) => {
+export const tslHiText = Fn(([spriteTexture, p, scale]: FnArguments) => {
   return sampleSprite(
     spriteTexture, p, scale,
     float(SCORE_SPRITES.TEXT_SPRITE_X + START_POSITION_HI * DIGIT_WIDTH),
@@ -49,7 +49,7 @@ export const spriteHiText = Fn(([spriteTexture, p, scale]: FnArguments) => {
   );
 });
 
-export const spriteScore = Fn(([spriteTexture, p, scale, score, hiScore]: FnArguments) => {
+export const tslScore = Fn(([spriteTexture, p, scale, score, hiScore]: FnArguments) => {
   const scoreInt = int(score || 0);
   const numDigitsScore = getDigitCountPerformant(scoreInt).clamp(5, 10);
   const hiScoreInt = int(hiScore || 0);
@@ -65,7 +65,7 @@ export const spriteScore = Fn(([spriteTexture, p, scale, score, hiScore]: FnArgu
   Loop({start: int(0), end: int(numDigitsScore), type: 'int', condition: '<'}, ({i}) => {
     const digit = getDigitAtPositionPerformant(scoreInt, i);
     const digitPosition = p.add(vec2(digitSpacing.mul(i), 0));
-    const sprite = spriteDigit(spriteTexture, digitPosition, scale, digit);
+    const sprite = tslDigit(spriteTexture, digitPosition, scale, digit);
     result.assign(mix(result, sprite, sprite.w));
   });
 
@@ -75,7 +75,7 @@ export const spriteScore = Fn(([spriteTexture, p, scale, score, hiScore]: FnArgu
   Loop({start: int(0), end: int(numDigitsHiScore), type: 'int', condition: '<'}, ({i}) => {
     const digit = getDigitAtPositionPerformant(hiScoreInt, i);
     const digitPosition = p.add(vec2(offsetHiScore.add(digitSpacing.mul(i)), 0));
-    const sprite = spriteDigit(spriteTexture, digitPosition, scale, digit);
+    const sprite = tslDigit(spriteTexture, digitPosition, scale, digit);
     // Apply reduced opacity to high score digits
     const dimmedSprite = vec4(sprite.xyz, sprite.w.mul(hiScoreOpacity));
     result.assign(mix(result, dimmedSprite, dimmedSprite.w));
@@ -83,7 +83,7 @@ export const spriteScore = Fn(([spriteTexture, p, scale, score, hiScore]: FnArgu
 
   // Render HI text (with 80% opacity like the original)
   const offsetHiText = offsetHiScore.add(digitSpacing.mul(numDigitsHiScore.add(2)));
-  const hiTextSprite = spriteHiText(spriteTexture, p.add(vec2(offsetHiText, 0)), scale);
+  const hiTextSprite = tslHiText(spriteTexture, p.add(vec2(offsetHiText, 0)), scale);
   // Apply reduced opacity to HI text
   const dimmedHiText = vec4(hiTextSprite.xyz, hiTextSprite.w.mul(hiScoreOpacity));
   result.assign(mix(result, dimmedHiText, dimmedHiText.w));
@@ -136,5 +136,3 @@ const getDigitCountPerformant = Fn(([value]: FnArguments) => {
                 select(absValue.lessThan(100000000), 8,
                   select(absValue.lessThan(1000000000), 9, 10)))))))));
 });
-
-
