@@ -1,6 +1,6 @@
 import './style.css'
 import * as THREE from 'three/webgpu'
-import { color, float, Fn, If, mix, negate, positionLocal, texture, uniform, vec2, vec3 } from 'three/tsl';
+import { color, float, Fn, If, mix, negate, positionLocal, texture, time, uniform, vec2, vec3 } from 'three/tsl';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GUI } from 'dat.gui';
 import { spriteGameOver, spriteHorizonRepeating, spriteRestart } from './spriteMisc.ts';
@@ -138,7 +138,7 @@ const main = Fn(() => {
 
   // Pass 1: Render T-Rex BEHIND obstacles (back layer)
   const trexPos = p.sub(vec2(-2.79, uniformJumpOffsetY.add(-0.41)))
-  const trexSpriteBack = spriteTRex(spriteTextureNode, trexPos, 1, uniformTRexState, gameTime)
+  const trexSpriteBack = spriteTRex(spriteTextureNode, trexPos, 1, uniformTRexState, time)
   const backLayerColor = mix(finalColour, trexSpriteBack.xyz, trexSpriteBack.w)
 
   // Render obstacles on top of back layer
@@ -146,7 +146,7 @@ const main = Fn(() => {
   const backLayerWithObstacles = mix(backLayerColor, obstacleSprite.xyz, obstacleSprite.w)
 
   // Pass 2: Render T-Rex IN FRONT of obstacles (front layer)
-  const trexSpriteFront = spriteTRex(spriteTextureNode, trexPos, 1, uniformTRexState, gameTime)
+  const trexSpriteFront = spriteTRex(spriteTextureNode, trexPos, 1, uniformTRexState, time)
   const frontLayerColor = mix(backLayerWithObstacles, trexSpriteFront.xyz, trexSpriteFront.w)
 
   // Collision detection: Compare back and front layers
