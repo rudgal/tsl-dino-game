@@ -27,7 +27,7 @@ const CAMERA_FAR = 10;
 const CAMERA_Z = 4;
 
 // Game speed settings
-const GAME_SPEED_START = 3.6;
+const GAME_SPEED_START = 3.8;
 const GAME_SPEED_MAX = 7.8;
 const GAME_SPEED_ACCELERATION_DEFAULT = 0.01;
 
@@ -74,7 +74,7 @@ const options = {
   jumpOffsetY: 0,
   score: 0,
   hiScore: getHighScore(),
-  scoreCoefficient: 1.5,
+  scoreCoefficient: 1.8,
   distanceRan: 0,
   collisionColor: '#' + DEFAULT_COLLISION_COLOR.getHexString(),
   // Background gradient colors
