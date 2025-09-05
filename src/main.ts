@@ -255,7 +255,7 @@ gui.add(triggerNextNight, 'trigger').name('Trigger Next Night')
 
 // Reference image overlay controls
 const referenceFolder = gui.addFolder('Reference Overlay')
-const imageOptions = ['None', 'Reference 01', 'Reference 02', 'Game Over']
+const imageOptions = ['None', 'Reference 01', 'Reference 02', 'Reference 03', 'Game Over']
 referenceFolder.add(options, 'referenceImage', imageOptions).name('Image').onChange(() => {
   updateReferenceImage()
 })
@@ -479,6 +479,7 @@ function updateReferenceImage() {
     'None': '',
     'Reference 01': '/reference/reference_01.png',
     'Reference 02': '/reference/reference_02.png',
+    'Reference 03': '/reference/reference_03.png',
     'Game Over': '/reference/reference_gameOver.png'
   };
 
