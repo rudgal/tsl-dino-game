@@ -3,7 +3,8 @@ import * as THREE from 'three/webgpu'
 import { color, float, Fn, If, mix, negate, positionLocal, texture, time, uniform, vec2, vec3 } from 'three/tsl';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GUI } from 'dat.gui';
-import { spriteGameOver, spriteHorizonRepeating, spriteRestart } from './spriteMisc.ts';
+import { spriteHorizonRepeating } from './spriteHorizon.ts';
+import { spriteGameOver, spriteRestart } from './spriteGameOver.ts';
 import { spriteTRex, TREX_STATE } from './spriteTRex.ts';
 import { controlsTRex, initTRexControls } from './tRexControls.ts';
 import { cloudField } from './spriteCloud.ts';
