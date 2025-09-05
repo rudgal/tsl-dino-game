@@ -68,7 +68,7 @@ controls.enableDamping = true
 const options = {
   gameSpeed: GAME_SPEED_START,
   gameSpeedAcceleration: GAME_SPEED_ACCELERATION_DEFAULT,
-  trexState: TREX_STATE.WAITING as number, // also acts as sort of gameState
+  trexState: TREX_STATE.WAITING as number, // T-Rex state (also indicates overall game state)
   jumpOffsetY: 0,
   score: 0,
   hiScore: getHighScore(),
@@ -102,7 +102,7 @@ const spriteTexture = textureLoader.load('/default_100_percent/100-offline-sprit
 spriteTexture.magFilter = THREE.NearestFilter
 spriteTexture.minFilter = THREE.NearestFilter
 spriteTexture.generateMipmaps = false
-spriteTexture.colorSpace = THREE.SRGBColorSpace // color space sRGB to match the colors from original game
+spriteTexture.colorSpace = THREE.SRGBColorSpace // sRGB to match original Chrome dino game colors
 const spriteTextureNode = texture(spriteTexture)
 
 /*
@@ -125,14 +125,14 @@ material.side = THREE.DoubleSide
 const mesh = new THREE.Mesh(new THREE.PlaneGeometry(PLANE_WIDTH, PLANE_HEIGHT), material)
 scene.add(mesh)
 
-// Raycaster for click detection
+// Raycaster for restart button click detection
 const raycaster = new THREE.Raycaster()
 const mouse = new THREE.Vector2()
 
 /*
-  ==== GUI CONTROLS ====
+  ==== DEBUG GUI & CONTROLS ====
 */
-const distanceRanRef = { value: 0 };
+const distanceRanRef = { value: 0 }; // Reference for GUI to update distanceRan
 const gui = initDebugGui(
   options,
   {
@@ -219,7 +219,7 @@ const collisionSystem = new CollisionDetectionSystem(renderer, scene, {
 */
 const clock = new THREE.Clock()
 let distanceRan = 0; // Track total distance in world units
-let lastReadbackTime = 0;
+let lastCollisionCheckTime = 0;
 
 function animate() {
   const delta = clock.getDelta();
@@ -242,7 +242,7 @@ function animate() {
     options.distanceRan = distanceRan;
     uniformDistanceRan.value = options.distanceRan;
 
-    // Convert distance to score using same coefficient as reference
+    // Convert distance to score using coefficient
     const calculatedScore = Math.floor(distanceRan * options.scoreCoefficient);
     options.score = calculatedScore;
     uniformScore.value = options.score;
@@ -255,7 +255,7 @@ function animate() {
   }
 
   // Detect collisions at specified interval (only when game is running)
-  if (isGameRunning() && clock.getElapsedTime() - lastReadbackTime > COLLISION_DETECTION_INTERVAL) {
+  if (isGameRunning() && clock.getElapsedTime() - lastCollisionCheckTime > COLLISION_DETECTION_INTERVAL) {
     collisionSystem.detectCollision({ collisionColor: options.collisionColor }).then(collision => {
       if (!collision) return;
 
@@ -272,7 +272,7 @@ function animate() {
       options.gameSpeed = 0;
       console.log('GAME OVER! Score:', options.score, 'High Score:', options.hiScore);
     }).catch(console.error);
-    lastReadbackTime = clock.getElapsedTime();
+    lastCollisionCheckTime = clock.getElapsedTime();
   }
 
   gui?.updateDisplay()

@@ -1,5 +1,8 @@
+/**
+ * T-Rex controls and jump physics
+ * Handles player input and T-Rex state management
+ */
 
-// Jump physics constants (units per second)
 import { TREX_STATE } from './tsl/tslTRex.ts';
 
 const JUMP_PHYSICS = {
@@ -178,7 +181,6 @@ export function controlsTRex(deltaTimeSeconds: number): number {
     }
   }
 
-  // console.log(`Jump Y: ${jumpOffsetY.toFixed(2)}, Velocity: ${jumpVelocity.toFixed(2)}, Delta: ${deltaTimeSeconds.toFixed(3)}`);
   return jumpOffsetY;
 }
 
