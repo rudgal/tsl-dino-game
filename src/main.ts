@@ -6,7 +6,7 @@ import { TREX_STATE } from './tsl/tslTRex.ts';
 import { controlsTRex, initTRexControls } from './tRexControls.ts';
 import { getHighScore, setHighScore } from './highScore.ts';
 import { createFragmentShader } from './tsl/fragmentShader.ts';
-import { initDebugGui } from './debug/debugGui.ts';
+import { initDebugGui, updateReferenceImage } from './debug/debugGui.ts';
 import { CollisionDetectionSystem } from './collision/collisionDetection.ts';
 
 /*
@@ -143,11 +143,10 @@ const gui = initDebugGui(
     uniformHiScore,
     uniformCollisionColor
   },
-  distanceRanRef,
-  updateReferenceImage
+  distanceRanRef
 );
 
-updateReferenceImage()
+updateReferenceImage(options)
 
 // Initialize T-Rex controls
 initTRexControls(
@@ -281,41 +280,3 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-/*
-  ==== REFERENCE IMAGE OVERLAY ====
-*/
-function updateReferenceImage() {
-  const referenceImage = document.getElementById('reference-image') as HTMLImageElement;
-  const referenceOverlay = document.getElementById('reference-overlay') as HTMLDivElement;
-  if (!referenceImage || !referenceOverlay) return;
-
-  const imageMap: Record<string, string> = {
-    'None': '',
-    'Reference 01': '/reference/reference_01.png',
-    'Reference 02': '/reference/reference_02.png',
-    'Reference 03': '/reference/reference_03.png',
-    'Game Over': '/reference/reference_gameOver.png'
-  };
-
-  const imagePath = imageMap[options.referenceImage];
-  if (imagePath) {
-    referenceOverlay.style.display = 'block';
-    referenceImage.src = imagePath;
-    referenceImage.style.display = 'block';
-    referenceImage.style.opacity = (options.referenceOpacity / 100).toString();
-
-    // Apply scaling while preserving aspect ratio
-    const scaleValue = options.referenceScale / 100;
-    referenceImage.style.transform = `scale(${scaleValue})`;
-
-    // Apply color shift instead of invert
-    if (options.referenceColorShift) {
-      referenceImage.classList.add('color-shift');
-    } else {
-      referenceImage.classList.remove('color-shift');
-    }
-  } else {
-    referenceOverlay.style.display = 'none';
-    referenceImage.style.display = 'none';
-  }
-}
