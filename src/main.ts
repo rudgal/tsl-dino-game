@@ -7,6 +7,7 @@ import { controlsTRex, initTRexControls } from './tRexControls.ts';
 import { getHighScore, setHighScore } from './highScore.ts';
 import { createFragmentShader } from './tsl/fragmentShader.ts';
 import { initDebugGui } from './debug/debugGui.ts';
+import { CollisionDetectionSystem } from './collision/collisionDetection.ts';
 
 /*
   ==== CONSTANTS ====
@@ -14,14 +15,6 @@ import { initDebugGui } from './debug/debugGui.ts';
 // Base plane dimensions (world units)
 const PLANE_WIDTH = 6;
 const PLANE_HEIGHT = 1.5;
-const PLANE_ASPECT_RATIO = PLANE_WIDTH / PLANE_HEIGHT;
-
-// Readback dimensions (pixels) - lower resolution for performance
-const READBACK_WIDTH = 256;
-const READBACK_HEIGHT = Math.floor(READBACK_WIDTH / PLANE_ASPECT_RATIO); // 32 pixels
-const READBACK_DISPLAY_SCALE = 1 / 3;
-const READBACK_FOCUS_WIDTH_PERCENT = 0.12;
-const READBACK_FOCUS_WIDTH_WORLD = PLANE_WIDTH * READBACK_FOCUS_WIDTH_PERCENT;
 
 // T-Rex position (world coordinates)
 const TREX_X_WORLD = -2.79;
@@ -36,8 +29,8 @@ const GAME_SPEED_START = 3.6;
 const GAME_SPEED_MAX = 7.8;
 const GAME_SPEED_ACCELERATION_DEFAULT = 0.01;
 
-// Readback settings
-const READBACK_INTERVAL = 0.05; // 50ms = 20 FPS for collision detection
+// Collision detection settings
+const COLLISION_DETECTION_INTERVAL = 0.05; // 50ms = 20 FPS for collision detection
 
 // Debug mode check
 const urlParams = new URLSearchParams(window.location.search);
@@ -45,7 +38,6 @@ const DEBUG_MODE = urlParams.has('debug');
 
 // Default collision color
 const DEFAULT_COLLISION_COLOR = new THREE.Color(0x444444);
-const COLLISION_COLOR_DETECTION_TOLERANCE = 0.01;
 
 
 const scene = new THREE.Scene()
@@ -211,104 +203,17 @@ function onMouseClick(event: MouseEvent) {
 renderer.domElement.addEventListener('click', onMouseClick);
 
 /*
-  ==== READBACK TESTING ====
+  ==== COLLISION DETECTION ====
 */
-// Readback target with optimized resolution
-const readbackTarget = new THREE.RenderTarget(READBACK_WIDTH, READBACK_HEIGHT, {
-  format: THREE.RGBAFormat,
-  type: THREE.UnsignedByteType
+const collisionSystem = new CollisionDetectionSystem(renderer, scene, {
+  planeWidth: PLANE_WIDTH,
+  planeHeight: PLANE_HEIGHT,
+  trexXWorld: TREX_X_WORLD,
+  cameraZ: CAMERA_Z,
+  cameraNear: CAMERA_NEAR,
+  cameraFar: CAMERA_FAR,
+  debugMode: DEBUG_MODE
 });
-
-// Readback display elements (only create in debug mode)
-let pixelBufferTexture: THREE.DataTexture | null = null;
-let readbackDisplayMesh: THREE.Mesh | null = null;
-
-if (DEBUG_MODE) {
-  // Create a texture to display readback results
-  const pixelBuffer = new Uint8Array(READBACK_WIDTH * READBACK_HEIGHT * 4).fill(0);
-  pixelBufferTexture = new THREE.DataTexture(pixelBuffer, READBACK_WIDTH, READBACK_HEIGHT);
-  pixelBufferTexture.type = THREE.UnsignedByteType;
-  pixelBufferTexture.format = THREE.RGBAFormat;
-  pixelBufferTexture.flipY = true;
-  pixelBufferTexture.needsUpdate = true;
-
-  // Material to display the readback texture
-  const readbackDisplayMaterial = new THREE.NodeMaterial();
-  readbackDisplayMaterial.fragmentNode = texture(pixelBufferTexture);
-
-  // Create a small overlay quad to display readback results (focused area)
-  readbackDisplayMesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(READBACK_FOCUS_WIDTH_WORLD * READBACK_DISPLAY_SCALE, PLANE_HEIGHT * READBACK_DISPLAY_SCALE),
-    readbackDisplayMaterial
-  );
-  // Position below main plane, offset to match T-Rex X position
-  readbackDisplayMesh.position.set(TREX_X_WORLD * READBACK_DISPLAY_SCALE, -(PLANE_HEIGHT * 0.8), 0);
-  scene.add(readbackDisplayMesh);
-}
-
-// Create an orthographic camera that captures focused area around T-Rex
-const readbackCamera = new THREE.OrthographicCamera(
-  TREX_X_WORLD - READBACK_FOCUS_WIDTH_WORLD / 2,  // left: focus around T-Rex
-  TREX_X_WORLD + READBACK_FOCUS_WIDTH_WORLD / 2,  // right: focus around T-Rex
-  PLANE_HEIGHT / 2, -PLANE_HEIGHT / 2,              // top, bottom (note: Y is flipped)
-  CAMERA_NEAR, CAMERA_FAR
-);
-readbackCamera.position.z = CAMERA_Z;
-
-/*
-  ==== COLLISION DETECTION HELPERS ====
-*/
-
-async function readbackAndDetectCollision() {
-  // Hide the readback display mesh temporarily to avoid recursion
-  readbackDisplayMesh && (readbackDisplayMesh.visible = false);
-
-  // Render main scene to readback target using orthographic camera that captures just the plane
-  const originalTarget = renderer.getRenderTarget();
-  renderer.setRenderTarget(readbackTarget);
-  renderer.render(scene, readbackCamera);
-  renderer.setRenderTarget(originalTarget);
-
-  // Show the readback display mesh again
-  readbackDisplayMesh && (readbackDisplayMesh.visible = true);
-
-  // Read back the entire readback target
-  const width = readbackTarget.width;
-  const height = readbackTarget.height;
-  const readbackPixelBuffer = await renderer.readRenderTargetPixelsAsync(readbackTarget, 0, 0, width, height);
-
-  // Update the display texture with readback data (only in debug mode)
-  if (pixelBufferTexture) {
-    const textureData = pixelBufferTexture.image.data as Uint8Array;
-    textureData.set(readbackPixelBuffer);
-    pixelBufferTexture.needsUpdate = true;
-  }
-
-  // Check for collision color pixels in the readback (collision indicator)
-  const {r: targetR, g: targetG, b: targetB} = new THREE.Color(options.collisionColor);
-
-  let collisionPixelCount = 0;
-
-  for (let i = 0; i < readbackPixelBuffer.length; i += 4) {
-    const r = readbackPixelBuffer[i] / 255;
-    const g = readbackPixelBuffer[i + 1] / 255;
-    const b = readbackPixelBuffer[i + 2] / 255;
-
-    // Check if this pixel matches the collision color (with small tolerance for GPU precision)
-    const isCollisionColor = [r - targetR, g - targetG, b - targetB].every(diff => Math.abs(diff) < COLLISION_COLOR_DETECTION_TOLERANCE);
-
-    if (isCollisionColor) {
-      collisionPixelCount++;
-    }
-  }
-
-  if (collisionPixelCount > 0) {
-    console.log(`COLLISION DETECTED! Found ${collisionPixelCount} collision pixels`);
-    return true;
-  }
-
-  return false;
-}
 
 /*
   ==== ANIMATION LOOP ====
@@ -350,9 +255,9 @@ function animate() {
     uniformJumpOffsetY.value = options.jumpOffsetY;
   }
 
-  // readback at specified interval to catch collisions (only when game is running)
-  if (isGameRunning() && clock.getElapsedTime() - lastReadbackTime > READBACK_INTERVAL) {
-    readbackAndDetectCollision().then(collision => {
+  // Detect collisions at specified interval (only when game is running)
+  if (isGameRunning() && clock.getElapsedTime() - lastReadbackTime > COLLISION_DETECTION_INTERVAL) {
+    collisionSystem.detectCollision({ collisionColor: options.collisionColor }).then(collision => {
       if (!collision) return;
 
       // Update high score
