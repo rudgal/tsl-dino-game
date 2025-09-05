@@ -44,6 +44,10 @@ const GAME_SPEED_ACCELERATION_DEFAULT = 0.01;
 // Readback settings
 const READBACK_INTERVAL = 0.05; // 50ms = 20 FPS for collision detection
 
+// Debug mode check
+const urlParams = new URLSearchParams(window.location.search);
+const DEBUG_MODE = urlParams.has('debug');
+
 const scene = new THREE.Scene()
 
 const camera = new THREE.PerspectiveCamera(
@@ -200,74 +204,79 @@ const mouse = new THREE.Vector2()
 /*
   ==== GUI CONTROLS ====
 */
-const gui = new GUI()
-gui.add(options, 'distanceRan', 0, 10000, 0.1).onChange((value: number) => {
-  uniformDistanceRan.value = value
-})
+let gui: GUI | null = null;
+if (DEBUG_MODE) {
+  gui = new GUI();
 
-gui.add(options, 'gameSpeed', 0.5, 10, 0.1).onChange(() => {
-  // Game speed is stored in options but not needed in shader
-})
+  gui.add(options, 'distanceRan', 0, 10000, 0.1).onChange((value: number) => {
+    uniformDistanceRan.value = value
+  })
 
-gui.add(options, 'gameSpeedAcceleration', 0, 0.1, 0.001)
+  gui.add(options, 'gameSpeed', 0.5, 10, 0.1).onChange(() => {
+    // Game speed is stored in options but not needed in shader
+  })
 
-// Add T-Rex state control
-const stateNames = {
-  'Waiting': TREX_STATE.WAITING,
-  'Running': TREX_STATE.RUNNING,
-  'Jumping': TREX_STATE.JUMPING,
-  'Ducking': TREX_STATE.DUCKING,
-  'Crashed': TREX_STATE.CRASHED
-}
-gui.add(options, 'trexState', stateNames).name('T-Rex State').onChange((value: number) => {
-  uniformTRexState.value = value
-})
+  gui.add(options, 'gameSpeedAcceleration', 0, 0.1, 0.001)
 
-gui.add(options, 'jumpOffsetY', -0.5, 1.5, 0.01).onChange((value: number) => {
-  uniformJumpOffsetY.value = value
-})
-
-gui.add(options, 'score', 0, 99999, 1).onChange((value: number) => {
-  uniformScore.value = value
-})
-
-gui.add(options, 'scoreCoefficient', 0.05, 10, 0.05)
-
-
-// Add button to trigger next night mode
-const triggerNextNight = {
-  trigger: () => {
-    // Calculate the next night trigger point
-    const currentScore = options.score;
-    const nextNightScore = Math.ceil(currentScore / 700) * 700;
-
-    // Convert score back to distanceRan using the coefficient
-    // score = distanceRan * scoreCoefficient, so distanceRan = score / scoreCoefficient
-    const targetDistance = nextNightScore / options.scoreCoefficient;
-    distanceRan = targetDistance;
-
-    // Update score immediately
-    options.score = nextNightScore;
-    uniformScore.value = options.score;
+  // Add T-Rex state control
+  const stateNames = {
+    'Waiting': TREX_STATE.WAITING,
+    'Running': TREX_STATE.RUNNING,
+    'Jumping': TREX_STATE.JUMPING,
+    'Ducking': TREX_STATE.DUCKING,
+    'Crashed': TREX_STATE.CRASHED
   }
-};
-gui.add(triggerNextNight, 'trigger').name('Trigger Next Night')
+  gui.add(options, 'trexState', stateNames).name('T-Rex State').onChange((value: number) => {
+    uniformTRexState.value = value
+  })
 
-// Reference image overlay controls
-const referenceFolder = gui.addFolder('Reference Overlay')
-const imageOptions = ['None', 'Reference 01', 'Reference 02', 'Reference 03', 'Game Over']
-referenceFolder.add(options, 'referenceImage', imageOptions).name('Image').onChange(() => {
-  updateReferenceImage()
-})
-referenceFolder.add(options, 'referenceOpacity', 0, 100, 1).name('Opacity %').onChange(() => {
-  updateReferenceImage()
-})
-referenceFolder.add(options, 'referenceColorShift').name('Red Color Shift').onChange(() => {
-  updateReferenceImage()
-})
-referenceFolder.add(options, 'referenceScale', 25, 200, 1).name('Scale %').onChange(() => {
-  updateReferenceImage()
-})
+  gui.add(options, 'jumpOffsetY', -0.5, 1.5, 0.01).onChange((value: number) => {
+    uniformJumpOffsetY.value = value
+  })
+
+  gui.add(options, 'score', 0, 99999, 1).onChange((value: number) => {
+    uniformScore.value = value
+  })
+
+  gui.add(options, 'scoreCoefficient', 0.05, 10, 0.05)
+
+
+  // Add button to trigger next night mode
+  const triggerNextNight = {
+    trigger: () => {
+      // Calculate the next night trigger point
+      const currentScore = options.score;
+      const nextNightScore = Math.ceil(currentScore / 700) * 700;
+
+      // Convert score back to distanceRan using the coefficient
+      // score = distanceRan * scoreCoefficient, so distanceRan = score / scoreCoefficient
+      const targetDistance = nextNightScore / options.scoreCoefficient;
+      distanceRan = targetDistance;
+
+      // Update score immediately
+      options.score = nextNightScore;
+      uniformScore.value = options.score;
+    }
+  };
+  gui.add(triggerNextNight, 'trigger').name('Trigger Next Night')
+
+  // Reference image overlay controls
+  const referenceFolder = gui.addFolder('Reference Overlay')
+  const imageOptions = ['None', 'Reference 01', 'Reference 02', 'Reference 03', 'Game Over']
+  referenceFolder.add(options, 'referenceImage', imageOptions).name('Image').onChange(() => {
+    updateReferenceImage()
+  })
+  referenceFolder.add(options, 'referenceOpacity', 0, 100, 1).name('Opacity %').onChange(() => {
+    updateReferenceImage()
+  })
+  referenceFolder.add(options, 'referenceColorShift').name('Red Color Shift').onChange(() => {
+    updateReferenceImage()
+  })
+  referenceFolder.add(options, 'referenceScale', 25, 200, 1).name('Scale %').onChange(() => {
+    updateReferenceImage()
+  })
+}
+
 updateReferenceImage()
 
 // Initialize T-Rex controls
@@ -320,6 +329,7 @@ function onMouseClick(event: MouseEvent) {
     gameRestart();
   }
 }
+
 renderer.domElement.addEventListener('click', onMouseClick);
 
 /*
@@ -331,26 +341,32 @@ const readbackTarget = new THREE.RenderTarget(READBACK_WIDTH, READBACK_HEIGHT, {
   type: THREE.UnsignedByteType
 });
 
-// Create a texture to display readback results
-const pixelBuffer = new Uint8Array(READBACK_WIDTH * READBACK_HEIGHT * 4).fill(0);
-const pixelBufferTexture = new THREE.DataTexture(pixelBuffer, READBACK_WIDTH, READBACK_HEIGHT);
-pixelBufferTexture.type = THREE.UnsignedByteType;
-pixelBufferTexture.format = THREE.RGBAFormat;
-pixelBufferTexture.flipY = true;
-pixelBufferTexture.needsUpdate = true;
+// Readback display elements (only create in debug mode)
+let pixelBufferTexture: THREE.DataTexture | null = null;
+let readbackDisplayMesh: THREE.Mesh | null = null;
 
-// Material to display the readback texture
-const readbackDisplayMaterial = new THREE.NodeMaterial();
-readbackDisplayMaterial.fragmentNode = texture(pixelBufferTexture);
+if (DEBUG_MODE) {
+  // Create a texture to display readback results
+  const pixelBuffer = new Uint8Array(READBACK_WIDTH * READBACK_HEIGHT * 4).fill(0);
+  pixelBufferTexture = new THREE.DataTexture(pixelBuffer, READBACK_WIDTH, READBACK_HEIGHT);
+  pixelBufferTexture.type = THREE.UnsignedByteType;
+  pixelBufferTexture.format = THREE.RGBAFormat;
+  pixelBufferTexture.flipY = true;
+  pixelBufferTexture.needsUpdate = true;
 
-// Create a small overlay quad to display readback results (focused area)
-const readbackDisplayMesh = new THREE.Mesh(
-  new THREE.PlaneGeometry(READBACK_FOCUS_WIDTH_WORLD * READBACK_DISPLAY_SCALE, PLANE_HEIGHT * READBACK_DISPLAY_SCALE),
-  readbackDisplayMaterial
-);
-// Position below main plane, offset to match T-Rex X position
-readbackDisplayMesh.position.set(TREX_X_WORLD * READBACK_DISPLAY_SCALE, -(PLANE_HEIGHT * 0.8), 0);
-scene.add(readbackDisplayMesh);
+  // Material to display the readback texture
+  const readbackDisplayMaterial = new THREE.NodeMaterial();
+  readbackDisplayMaterial.fragmentNode = texture(pixelBufferTexture);
+
+  // Create a small overlay quad to display readback results (focused area)
+  readbackDisplayMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(READBACK_FOCUS_WIDTH_WORLD * READBACK_DISPLAY_SCALE, PLANE_HEIGHT * READBACK_DISPLAY_SCALE),
+    readbackDisplayMaterial
+  );
+  // Position below main plane, offset to match T-Rex X position
+  readbackDisplayMesh.position.set(TREX_X_WORLD * READBACK_DISPLAY_SCALE, -(PLANE_HEIGHT * 0.8), 0);
+  scene.add(readbackDisplayMesh);
+}
 
 // Create an orthographic camera that captures focused area around T-Rex
 const readbackCamera = new THREE.OrthographicCamera(
@@ -366,7 +382,7 @@ readbackCamera.position.z = CAMERA_Z;
 */
 async function readbackAndDetectCollision() {
   // Hide the readback display mesh temporarily to avoid recursion
-  readbackDisplayMesh.visible = false;
+  readbackDisplayMesh && (readbackDisplayMesh.visible = false);
 
   // Render main scene to readback target using orthographic camera that captures just the plane
   const originalTarget = renderer.getRenderTarget();
@@ -375,17 +391,19 @@ async function readbackAndDetectCollision() {
   renderer.setRenderTarget(originalTarget);
 
   // Show the readback display mesh again
-  readbackDisplayMesh.visible = true;
+  readbackDisplayMesh && (readbackDisplayMesh.visible = true);
 
   // Read back the entire readback target
   const width = readbackTarget.width;
   const height = readbackTarget.height;
   const readbackPixelBuffer = await renderer.readRenderTargetPixelsAsync(readbackTarget, 0, 0, width, height);
 
-  // Update the display texture with readback data
-  const textureData = pixelBufferTexture.image.data as Uint8Array;
-  textureData.set(readbackPixelBuffer);
-  pixelBufferTexture.needsUpdate = true;
+  // Update the display texture with readback data (only in debug mode)
+  if (pixelBufferTexture) {
+    const textureData = pixelBufferTexture.image.data as Uint8Array;
+    textureData.set(readbackPixelBuffer);
+    pixelBufferTexture.needsUpdate = true;
+  }
 
   // Check for any red pixels in the readback (collision indicator)
   let redPixelCount = 0;
@@ -462,7 +480,7 @@ function animate() {
     lastReadbackTime = clock.getElapsedTime();
   }
 
-  gui.updateDisplay()
+  gui?.updateDisplay()
 
   renderer.render(scene, camera);
 }
