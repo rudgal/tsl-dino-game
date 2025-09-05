@@ -9,6 +9,7 @@ import { controlsTRex, initTRexControls } from './tRexControls.ts';
 import { cloudField } from './spriteCloud.ts';
 import { spriteScore } from './spriteScore.ts';
 import { calculateNightMode } from './nightMode.ts';
+import { clearHighScore, getHighScore, setHighScore } from './highScore.ts';
 import { spriteMoon } from './spriteMoon.ts';
 import { spriteStars } from './spriteStars.ts';
 import { spriteObstacle } from './spriteObstacle.ts';
@@ -52,6 +53,7 @@ const DEBUG_MODE = urlParams.has('debug');
 const DEFAULT_COLLISION_COLOR = new THREE.Color(0x444444);
 const COLLISION_COLOR_DETECTION_TOLERANCE = 0.01;
 
+
 const scene = new THREE.Scene()
 
 const camera = new THREE.PerspectiveCamera(
@@ -83,6 +85,7 @@ const options = {
   trexState: TREX_STATE.WAITING as number, // also acts as sort of gameState
   jumpOffsetY: 0,
   score: 0,
+  hiScore: getHighScore(),
   scoreCoefficient: 1.5,
   distanceRan: 0,
   collisionColor: '#' + DEFAULT_COLLISION_COLOR.getHexString(),
@@ -103,6 +106,7 @@ const uniformDistanceRan = uniform(options.distanceRan)
 const uniformTRexState = uniform(options.trexState as number)
 const uniformJumpOffsetY = uniform(options.jumpOffsetY)
 const uniformScore = uniform(options.score)
+const uniformHiScore = uniform(options.hiScore)
 const uniformCollisionColor = uniform(new THREE.Color(options.collisionColor))
 
 // Load sprite sheet texture
@@ -168,7 +172,7 @@ const main = Fn(() => {
   finalColour.assign(frontLayerColor)
 
   // Score display - positioned at top right, rightmost digit as reference point
-  const scoreSprite = spriteScore(spriteTextureNode, p.sub(vec2(2.83, 0.59)), 0.95, uniformScore, 0)
+  const scoreSprite = spriteScore(spriteTextureNode, p.sub(vec2(2.83, 0.59)), 0.95, uniformScore, uniformHiScore)
   // Add score elements on top (UI layer)
   finalColour.assign(mix(finalColour, scoreSprite.xyz, scoreSprite.w))
 
@@ -246,6 +250,16 @@ if (DEBUG_MODE) {
 
   gui.add(options, 'scoreCoefficient', 0.05, 10, 0.05)
 
+  // Add button to clear high score
+  const clearHiScore = {
+    clear: () => {
+      clearHighScore();
+      options.hiScore = 0;
+      uniformHiScore.value = 0;
+      console.log('High score cleared!');
+    }
+  };
+  gui.add(clearHiScore, 'clear').name('Clear High Score')
 
   // Add button to trigger next night mode
   const triggerNextNight = {
@@ -485,10 +499,19 @@ function animate() {
   if (isGameRunning() && clock.getElapsedTime() - lastReadbackTime > READBACK_INTERVAL) {
     readbackAndDetectCollision().then(collision => {
       if (!collision) return;
+
+      // Update high score
+      if (options.score > options.hiScore) {
+        options.hiScore = options.score;
+        uniformHiScore.value = options.hiScore;
+        setHighScore(options.hiScore);
+        console.log('NEW HIGH SCORE!', options.hiScore);
+      }
+
       options.trexState = TREX_STATE.CRASHED;
       uniformTRexState.value = TREX_STATE.CRASHED;
       options.gameSpeed = 0;
-      console.log('GAME OVER! Score:', options.score);
+      console.log('GAME OVER! Score:', options.score, 'High Score:', options.hiScore);
     }).catch(console.error);
     lastReadbackTime = clock.getElapsedTime();
   }
