@@ -24,6 +24,7 @@ export interface GameOptions {
   referenceOpacity: number;
   referenceColorShift: boolean;
   referenceScale: number;
+  cameraAnimationEnabled: boolean;
 }
 
 interface GameUniforms {
@@ -38,7 +39,9 @@ interface GameUniforms {
 export function initDebugGui(
   options: GameOptions,
   uniforms: GameUniforms,
-  distanceRanRef: { value: number }
+  distanceRanRef: { value: number },
+  cameraAnimationCallback?: (enabled: boolean) => void,
+  camera?: THREE.PerspectiveCamera
 ): GUI | null {
   const urlParams = new URLSearchParams(window.location.search);
   const DEBUG_MODE = urlParams.has('debug');
@@ -130,6 +133,23 @@ export function initDebugGui(
   referenceFolder.add(options, 'referenceScale', 25, 200, 1).name('Scale %').onChange(() => {
     updateReferenceImage(options);
   });
+
+  if (cameraAnimationCallback) {
+    gui.add(options, 'cameraAnimationEnabled').name('CamAnimation').onChange(cameraAnimationCallback);
+  }
+
+  // Camera position logging
+  if (camera) {
+    const cameraUtils = {
+      logPosition: () => {
+        const pos = camera.position;
+        const rot = camera.rotation;
+        console.log(`Camera Position/Rotation:`);
+        console.log(`{ pos: new THREE.Vector3(${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)}), rot: new THREE.Euler(${rot.x.toFixed(3)}, ${rot.y.toFixed(3)}, ${rot.z.toFixed(3)}), duration: 3.0, remainTime: 2.0, ease: 'power2.inOut' },`);
+      }
+    };
+    gui.add(cameraUtils, 'logPosition').name('📍 Log Camera Pos');
+  }
 
   return gui;
 }

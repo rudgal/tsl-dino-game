@@ -8,6 +8,7 @@ import { getHighScore, setHighScore } from './highScore.ts';
 import { createFragmentShader } from './tsl/fragmentShader.ts';
 import { initDebugGui, updateReferenceImage } from './debug/debugGui.ts';
 import { CollisionDetectionSystem } from './collision/collisionDetection.ts';
+import { CameraAnimation } from './cameraAnimation.ts';
 
 /*
   ==== CONSTANTS ====
@@ -22,7 +23,7 @@ const TREX_X_WORLD = -2.79;
 // Camera settings
 const CAMERA_NEAR = 0.1;
 const CAMERA_FAR = 10;
-const CAMERA_Z = 2.5;
+const CAMERA_Z = 4;
 
 // Game speed settings
 const GAME_SPEED_START = 3.6;
@@ -43,7 +44,7 @@ const DEFAULT_COLLISION_COLOR = new THREE.Color(0x444444);
 const scene = new THREE.Scene()
 
 const camera = new THREE.PerspectiveCamera(
-  75,
+  80,
   window.innerWidth / window.innerHeight,
   CAMERA_NEAR,
   CAMERA_FAR
@@ -79,7 +80,9 @@ const options = {
   referenceImage: 'None', //'Reference 01',
   referenceOpacity: 50,
   referenceColorShift: true,
-  referenceScale: 88.6
+  referenceScale: 88.6,
+  // Camera animation options
+  cameraAnimationEnabled: false
 }
 // Helper functions to check game state
 const isGameOver = () => options.trexState === TREX_STATE.CRASHED;
@@ -133,6 +136,15 @@ const mouse = new THREE.Vector2()
   ==== DEBUG GUI & CONTROLS ====
 */
 const distanceRanRef = { value: 0 }; // Reference for GUI to update distanceRan
+
+// Initialize camera animation system
+const cameraAnimation = new CameraAnimation(camera, controls);
+
+// Start animation if enabled
+if (options.cameraAnimationEnabled) {
+  cameraAnimation.start();
+}
+
 const gui = initDebugGui(
   options,
   {
@@ -143,7 +155,9 @@ const gui = initDebugGui(
     uniformHiScore,
     uniformCollisionColor
   },
-  distanceRanRef
+  distanceRanRef,
+  (enabled: boolean) => cameraAnimation.toggle(enabled),
+  camera
 );
 
 updateReferenceImage(options)
@@ -224,7 +238,10 @@ let lastCollisionCheckTime = 0;
 function animate() {
   const delta = clock.getDelta();
 
-  controls.update();
+  // Update orbit controls (disabled during camera animation)
+  if (!cameraAnimation.isRunning) {
+    controls.update();
+  }
 
   // Only update game state if game is running (not waiting or crashed)
   if (isGameRunning()) {
