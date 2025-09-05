@@ -48,6 +48,10 @@ const READBACK_INTERVAL = 0.05; // 50ms = 20 FPS for collision detection
 const urlParams = new URLSearchParams(window.location.search);
 const DEBUG_MODE = urlParams.has('debug');
 
+// Default collision color
+const DEFAULT_COLLISION_COLOR = new THREE.Color(0x444444);
+const COLLISION_COLOR_DETECTION_TOLERANCE = 0.01;
+
 const scene = new THREE.Scene()
 
 const camera = new THREE.PerspectiveCamera(
@@ -81,6 +85,7 @@ const options = {
   score: 0,
   scoreCoefficient: 1.5,
   distanceRan: 0,
+  collisionColor: '#' + DEFAULT_COLLISION_COLOR.getHexString(),
   // Reference overlay options
   referenceImage: 'None', //'Reference 01',
   referenceOpacity: 50,
@@ -98,6 +103,7 @@ const uniformDistanceRan = uniform(options.distanceRan)
 const uniformTRexState = uniform(options.trexState as number)
 const uniformJumpOffsetY = uniform(options.jumpOffsetY)
 const uniformScore = uniform(options.score)
+const uniformCollisionColor = uniform(new THREE.Color(options.collisionColor))
 
 // Load sprite sheet texture
 const textureLoader = new THREE.TextureLoader()
@@ -184,8 +190,8 @@ const main = Fn(() => {
   const invertedColour = vec3(1.0).sub(finalColour)
   finalColour.assign(mix(finalColour, invertedColour, nightProgress))
 
-  // Visual debug: red tint when collision detected
-  finalColour.assign(hasCollision.select(vec3(1.0, 0, 0), finalColour))
+  // collision color tint when detected
+  finalColour.assign(hasCollision.select(uniformCollisionColor, finalColour))
 
   return finalColour
 })
@@ -259,6 +265,10 @@ if (DEBUG_MODE) {
     }
   };
   gui.add(triggerNextNight, 'trigger').name('Trigger Next Night')
+
+  gui.addColor(options, 'collisionColor').name('Collision Color').onChange(() => {
+    uniformCollisionColor.value.set(new THREE.Color(options.collisionColor));
+  })
 
   // Reference image overlay controls
   const referenceFolder = gui.addFolder('Reference Overlay')
@@ -380,6 +390,7 @@ readbackCamera.position.z = CAMERA_Z;
 /*
   ==== COLLISION DETECTION HELPERS ====
 */
+
 async function readbackAndDetectCollision() {
   // Hide the readback display mesh temporarily to avoid recursion
   readbackDisplayMesh && (readbackDisplayMesh.visible = false);
@@ -405,24 +416,26 @@ async function readbackAndDetectCollision() {
     pixelBufferTexture.needsUpdate = true;
   }
 
-  // Check for any red pixels in the readback (collision indicator)
-  let redPixelCount = 0;
+  // Check for collision color pixels in the readback (collision indicator)
+  const {r: targetR, g: targetG, b: targetB} = new THREE.Color(options.collisionColor);
+
+  let collisionPixelCount = 0;
 
   for (let i = 0; i < readbackPixelBuffer.length; i += 4) {
     const r = readbackPixelBuffer[i] / 255;
     const g = readbackPixelBuffer[i + 1] / 255;
     const b = readbackPixelBuffer[i + 2] / 255;
 
-    // Check if this pixel is red (high red, low green and blue)
-    const isRed = r > 0.8 && g < 0.2 && b < 0.2;
+    // Check if this pixel matches the collision color (with small tolerance for GPU precision)
+    const isCollisionColor = [r - targetR, g - targetG, b - targetB].every(diff => Math.abs(diff) < COLLISION_COLOR_DETECTION_TOLERANCE);
 
-    if (isRed) {
-      redPixelCount++;
+    if (isCollisionColor) {
+      collisionPixelCount++;
     }
   }
 
-  if (redPixelCount > 0) {
-    console.log(`COLLISION DETECTED! Found ${redPixelCount} red pixels`);
+  if (collisionPixelCount > 0) {
+    console.log(`COLLISION DETECTED! Found ${collisionPixelCount} collision pixels`);
     return true;
   }
 
