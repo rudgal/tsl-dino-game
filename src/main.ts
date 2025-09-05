@@ -2,11 +2,11 @@ import './style.css'
 import * as THREE from 'three/webgpu'
 import { texture, uniform } from 'three/tsl';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { GUI } from 'dat.gui';
 import { TREX_STATE } from './tsl/tslTRex.ts';
 import { controlsTRex, initTRexControls } from './tRexControls.ts';
-import { clearHighScore, getHighScore, setHighScore } from './highScore.ts';
+import { getHighScore, setHighScore } from './highScore.ts';
 import { createFragmentShader } from './tsl/fragmentShader.ts';
+import { initDebugGui } from './debug/debugGui.ts';
 
 /*
   ==== CONSTANTS ====
@@ -140,92 +140,20 @@ const mouse = new THREE.Vector2()
 /*
   ==== GUI CONTROLS ====
 */
-let gui: GUI | null = null;
-if (DEBUG_MODE) {
-  gui = new GUI();
-
-  gui.add(options, 'distanceRan', 0, 10000, 0.1).onChange((value: number) => {
-    uniformDistanceRan.value = value
-  })
-
-  gui.add(options, 'gameSpeed', 0.5, 10, 0.1).onChange(() => {
-    // Game speed is stored in options but not needed in shader
-  })
-
-  gui.add(options, 'gameSpeedAcceleration', 0, 0.1, 0.001)
-
-  // Add T-Rex state control
-  const stateNames = {
-    'Waiting': TREX_STATE.WAITING,
-    'Running': TREX_STATE.RUNNING,
-    'Jumping': TREX_STATE.JUMPING,
-    'Ducking': TREX_STATE.DUCKING,
-    'Crashed': TREX_STATE.CRASHED
-  }
-  gui.add(options, 'trexState', stateNames).name('T-Rex State').onChange((value: number) => {
-    uniformTRexState.value = value
-  })
-
-  gui.add(options, 'jumpOffsetY', -0.5, 1.5, 0.01).onChange((value: number) => {
-    uniformJumpOffsetY.value = value
-  })
-
-  gui.add(options, 'score', 0, 99999, 1).onChange((value: number) => {
-    uniformScore.value = value
-  })
-
-  gui.add(options, 'scoreCoefficient', 0.05, 10, 0.05)
-
-  // Add button to clear high score
-  const clearHiScore = {
-    clear: () => {
-      clearHighScore();
-      options.hiScore = 0;
-      uniformHiScore.value = 0;
-      console.log('High score cleared!');
-    }
-  };
-  gui.add(clearHiScore, 'clear').name('Clear High Score')
-
-  // Add button to trigger next night mode
-  const triggerNextNight = {
-    trigger: () => {
-      // Calculate the next night trigger point
-      const currentScore = options.score;
-      const nextNightScore = Math.ceil(currentScore / 700) * 700;
-
-      // Convert score back to distanceRan using the coefficient
-      // score = distanceRan * scoreCoefficient, so distanceRan = score / scoreCoefficient
-      const targetDistance = nextNightScore / options.scoreCoefficient;
-      distanceRan = targetDistance;
-
-      // Update score immediately
-      options.score = nextNightScore;
-      uniformScore.value = options.score;
-    }
-  };
-  gui.add(triggerNextNight, 'trigger').name('Trigger Next Night')
-
-  gui.addColor(options, 'collisionColor').name('Collision Color').onChange(() => {
-    uniformCollisionColor.value.set(new THREE.Color(options.collisionColor));
-  })
-
-  // Reference image overlay controls
-  const referenceFolder = gui.addFolder('Reference Overlay')
-  const imageOptions = ['None', 'Reference 01', 'Reference 02', 'Reference 03', 'Game Over']
-  referenceFolder.add(options, 'referenceImage', imageOptions).name('Image').onChange(() => {
-    updateReferenceImage()
-  })
-  referenceFolder.add(options, 'referenceOpacity', 0, 100, 1).name('Opacity %').onChange(() => {
-    updateReferenceImage()
-  })
-  referenceFolder.add(options, 'referenceColorShift').name('Red Color Shift').onChange(() => {
-    updateReferenceImage()
-  })
-  referenceFolder.add(options, 'referenceScale', 25, 200, 1).name('Scale %').onChange(() => {
-    updateReferenceImage()
-  })
-}
+const distanceRanRef = { value: 0 };
+const gui = initDebugGui(
+  options,
+  {
+    uniformDistanceRan,
+    uniformTRexState,
+    uniformJumpOffsetY,
+    uniformScore,
+    uniformHiScore,
+    uniformCollisionColor
+  },
+  distanceRanRef,
+  updateReferenceImage
+);
 
 updateReferenceImage()
 
@@ -404,6 +332,7 @@ function animate() {
     // Calculate distance traveled this frame and update score
     const distanceDelta = options.gameSpeed * delta;
     distanceRan += distanceDelta;
+    distanceRanRef.value = distanceRan;
 
     // Update options and uniforms
     options.distanceRan = distanceRan;
