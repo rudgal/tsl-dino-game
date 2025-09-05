@@ -9,6 +9,7 @@ import { createFragmentShader } from './tsl/fragmentShader.ts';
 import { initDebugGui, updateReferenceImage } from './debug/debugGui.ts';
 import { CollisionDetectionSystem } from './collision/collisionDetection.ts';
 import { CameraAnimation } from './cameraAnimation.ts';
+import { tslBackground } from './tsl/tslBackground.ts';
 
 /*
   ==== CONSTANTS ====
@@ -76,6 +77,11 @@ const options = {
   scoreCoefficient: 1.5,
   distanceRan: 0,
   collisionColor: '#' + DEFAULT_COLLISION_COLOR.getHexString(),
+  // Background gradient colors
+  bgBottomLeft: '#dc2626',
+  bgBottomRight: '#7c3aed',
+  bgTopLeft: '#059669',
+  bgTopRight: '#1e40af',
   // Reference overlay options
   referenceImage: 'None', //'Reference 01',
   referenceOpacity: 50,
@@ -97,6 +103,12 @@ const uniformJumpOffsetY = uniform(options.jumpOffsetY)
 const uniformScore = uniform(options.score)
 const uniformHiScore = uniform(options.hiScore)
 const uniformCollisionColor = uniform(new THREE.Color(options.collisionColor))
+
+// Background gradient uniforms
+const uniformBgBottomLeft = uniform(new THREE.Color(options.bgBottomLeft))
+const uniformBgBottomRight = uniform(new THREE.Color(options.bgBottomRight))
+const uniformBgTopLeft = uniform(new THREE.Color(options.bgTopLeft))
+const uniformBgTopRight = uniform(new THREE.Color(options.bgTopRight))
 
 // Load sprite sheet texture
 const textureLoader = new THREE.TextureLoader()
@@ -128,6 +140,14 @@ material.side = THREE.DoubleSide
 const mesh = new THREE.Mesh(new THREE.PlaneGeometry(PLANE_WIDTH, PLANE_HEIGHT), material)
 scene.add(mesh)
 
+// Set colorful gradient background directly on scene
+scene.backgroundNode = tslBackground({
+  bottomLeft: uniformBgBottomLeft,
+  bottomRight: uniformBgBottomRight,
+  topLeft: uniformBgTopLeft,
+  topRight: uniformBgTopRight
+})()
+
 // Raycaster for restart button click detection
 const raycaster = new THREE.Raycaster()
 const mouse = new THREE.Vector2()
@@ -154,6 +174,12 @@ const gui = initDebugGui(
     uniformScore,
     uniformHiScore,
     uniformCollisionColor
+  },
+  {
+    uniformBgBottomLeft,
+    uniformBgBottomRight,
+    uniformBgTopLeft,
+    uniformBgTopRight
   },
   distanceRanRef,
   (enabled: boolean) => cameraAnimation.toggle(enabled),

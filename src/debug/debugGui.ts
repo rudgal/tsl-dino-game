@@ -19,6 +19,11 @@ export interface GameOptions {
   scoreCoefficient: number;
   distanceRan: number;
   collisionColor: string;
+  // Background gradient colors
+  bgBottomLeft: string;
+  bgBottomRight: string;
+  bgTopLeft: string;
+  bgTopRight: string;
   // Reference overlay options
   referenceImage: string;
   referenceOpacity: number;
@@ -36,9 +41,17 @@ interface GameUniforms {
   uniformCollisionColor: ReturnType<typeof uniform>;
 }
 
+interface BackgroundUniforms {
+  uniformBgBottomLeft: ReturnType<typeof uniform>;
+  uniformBgBottomRight: ReturnType<typeof uniform>;
+  uniformBgTopLeft: ReturnType<typeof uniform>;
+  uniformBgTopRight: ReturnType<typeof uniform>;
+}
+
 export function initDebugGui(
   options: GameOptions,
   uniforms: GameUniforms,
+  backgroundUniforms: BackgroundUniforms,
   distanceRanRef: { value: number },
   cameraAnimationCallback?: (enabled: boolean) => void,
   camera?: THREE.PerspectiveCamera
@@ -150,6 +163,27 @@ export function initDebugGui(
     };
     gui.add(cameraUtils, 'logPosition').name('📍 Log Camera Pos');
   }
+
+  // Add background gradient controls
+  const backgroundFolder = gui.addFolder('Background Gradient');
+
+  backgroundFolder.addColor(options, 'bgBottomLeft').name('Bottom Left').onChange((value: string) => {
+    backgroundUniforms.uniformBgBottomLeft.value = new THREE.Color(value);
+  });
+
+  backgroundFolder.addColor(options, 'bgBottomRight').name('Bottom Right').onChange((value: string) => {
+    backgroundUniforms.uniformBgBottomRight.value = new THREE.Color(value);
+  });
+
+  backgroundFolder.addColor(options, 'bgTopLeft').name('Top Left').onChange((value: string) => {
+    backgroundUniforms.uniformBgTopLeft.value = new THREE.Color(value);
+  });
+
+  backgroundFolder.addColor(options, 'bgTopRight').name('Top Right').onChange((value: string) => {
+    backgroundUniforms.uniformBgTopRight.value = new THREE.Color(value);
+  });
+
+  backgroundFolder.open();
 
   return gui;
 }
