@@ -45,7 +45,7 @@ const DEFAULT_COLLISION_COLOR = new THREE.Color(0x444444);
 const scene = new THREE.Scene()
 
 const camera = new THREE.PerspectiveCamera(
-  80,
+  78,
   window.innerWidth / window.innerHeight,
   CAMERA_NEAR,
   CAMERA_FAR
