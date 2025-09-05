@@ -2,7 +2,7 @@
  * T-Rex sprite utilities for TSL shader system
  */
 
-import { float, floor, Fn, mod, select, hash, mix } from 'three/tsl';
+import { float, floor, Fn, hash, mix, mod, select, vec2 } from 'three/tsl';
 import type { FnArguments } from './types.ts';
 import { sampleSprite } from './spriteUtils.ts';
 
@@ -63,6 +63,12 @@ export const spriteTRex = Fn(([spriteTexture, p, scale, state, animTime]: FnArgu
   // Get blinking state using the extracted function
   const shouldBlink = isBlinking(animTime);
 
+  // Apply horizontal offset when ducking
+  const positionOffset = select(state.equal(float(TREX_STATE.DUCKING)),
+    vec2(0.06, 0),
+    vec2(0, 0));
+  const adjustedP = p.sub(positionOffset);
+
   // Select sprite based on state
   // WAITING state (0): eyes open (WAITING_1) most of the time, brief blink (WAITING_2)
   const waitingX = select(shouldBlink,
@@ -96,5 +102,5 @@ export const spriteTRex = Fn(([spriteTexture, p, scale, state, animTime]: FnArgu
   const spriteY = float(TREX_SPRITES.WAITING_1.y);
   const spriteHeight = float(TREX_SPRITES.WAITING_1.height);
 
-  return sampleSprite(spriteTexture, p, scale, spriteX, spriteY, spriteWidth, spriteHeight);
+  return sampleSprite(spriteTexture, adjustedP, scale, spriteX, spriteY, spriteWidth, spriteHeight);
 });
