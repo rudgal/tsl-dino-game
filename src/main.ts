@@ -1,19 +1,12 @@
 import './style.css'
 import * as THREE from 'three/webgpu'
-import { color, float, Fn, If, mix, negate, positionLocal, texture, time, uniform, vec2, vec3 } from 'three/tsl';
+import { texture, uniform } from 'three/tsl';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GUI } from 'dat.gui';
-import { tslHorizonRepeating } from './tsl/tslHorizon.ts';
-import { tslGameOver, tslRestart } from './tsl/tslGameOver.ts';
-import { tslTRex, TREX_STATE } from './tsl/tslTRex.ts';
+import { TREX_STATE } from './tsl/tslTRex.ts';
 import { controlsTRex, initTRexControls } from './tRexControls.ts';
-import { tslCloudField } from './tsl/tslCloud.ts';
-import { tslScore } from './tsl/tslScore.ts';
-import { calculateNightMode } from './nightMode.ts';
 import { clearHighScore, getHighScore, setHighScore } from './highScore.ts';
-import { tslMoon } from './tsl/tslMoon.ts';
-import { tslStars } from './tsl/tslStars.ts';
-import { tslObstacle } from './tsl/tslObstacle.ts';
+import { createFragmentShader } from './tsl/fragmentShader.ts';
 
 /*
   ==== CONSTANTS ====
@@ -123,86 +116,18 @@ const spriteTextureNode = texture(spriteTexture)
 /*
   ==== FRAGMENT SHADER ====
 */
-const main = Fn(() => {
-  const p = positionLocal.toVar()
-  const gameTime = uniformDistanceRan;
-
-  // Calculate night mode data early for moon/stars
-  const nightData = calculateNightMode(uniformScore)
-  const nightProgress = nightData.x
-
-  const finalColour = color('#f7f7f7')
-
-  // Render stars (background layer, behind everything)
-  const starsSprite = tslStars(spriteTextureNode, p, gameTime, nightData)
-  finalColour.assign(mix(finalColour, starsSprite.xyz, starsSprite.w))
-
-  // Render moon (behind clouds but in front of stars)
-  const moonSprite = tslMoon(spriteTextureNode, p, gameTime, nightData)
-  finalColour.assign(mix(finalColour, moonSprite.xyz, moonSprite.w))
-
-  // Cloud field with parallax scrolling
-  const cloudsSprite = tslCloudField(spriteTextureNode, p, gameTime, 1.0)
-  finalColour.assign(mix(finalColour, cloudsSprite.xyz, cloudsSprite.w))
-
-  // Position horizon like in the original game
-  const horizonSprite = tslHorizonRepeating(spriteTextureNode, p.sub(vec2(negate(gameTime), -0.58)), 1.0)
-  finalColour.assign(mix(finalColour, horizonSprite.xyz, horizonSprite.w))
-
-  // ===== COLLISION DETECTION: BORDER COLOR APPROACH =====
-
-  // Pass 1: Render T-Rex BEHIND obstacles (back layer)
-  const trexPos = p.sub(vec2(-2.79, uniformJumpOffsetY.add(-0.41)))
-  const trexSpriteBack = tslTRex(spriteTextureNode, trexPos, 1, uniformTRexState, time)
-  const backLayerColor = mix(finalColour, trexSpriteBack.xyz, trexSpriteBack.w)
-
-  // Render obstacles on top of back layer
-  const obstacleSprite = tslObstacle(spriteTextureNode, p, gameTime, 1, uniformScore)
-  const backLayerWithObstacles = mix(backLayerColor, obstacleSprite.xyz, obstacleSprite.w)
-
-  // Pass 2: Render T-Rex IN FRONT of obstacles (front layer)
-  const trexSpriteFront = tslTRex(spriteTextureNode, trexPos, 1, uniformTRexState, time)
-  const frontLayerColor = mix(backLayerWithObstacles, trexSpriteFront.xyz, trexSpriteFront.w)
-
-  // Collision detection: Compare back and front layers
-  const colorDifference = backLayerWithObstacles.sub(frontLayerColor).abs()
-  const maxDifference = colorDifference.x.max(colorDifference.y).max(colorDifference.z)
-  const hasCollision = maxDifference.greaterThan(float(0.01)) // Threshold for color difference
-
-  // Apply the front layer as final color
-  finalColour.assign(frontLayerColor)
-
-  // Score display - positioned at top right, rightmost digit as reference point
-  const scoreSprite = tslScore(spriteTextureNode, p.sub(vec2(2.83, 0.59)), 0.95, uniformScore, uniformHiScore)
-  // Add score elements on top (UI layer)
-  finalColour.assign(mix(finalColour, scoreSprite.xyz, scoreSprite.w))
-
-  // Game Over display when crashed - keep it simple for now
-  const isCrashed = uniformTRexState.equal(float(TREX_STATE.CRASHED))
-
-  // Only overlay game over elements when crashed
-  If(isCrashed, () => {
-    // "GAME OVER" text sprite positioned in center
-    const gameOverSprite = tslGameOver(spriteTextureNode, p.sub(vec2(0, 0.27)), 1.0)
-    finalColour.assign(mix(finalColour, gameOverSprite.xyz, gameOverSprite.w))
-
-    // Restart symbol positioned below the text
-    const restartSprite = tslRestart(spriteTextureNode, p.sub(vec2(0, -0.15)), 1)
-    finalColour.assign(mix(finalColour, restartSprite.xyz, restartSprite.w))
-  })
-
-  // Apply night mode color inversion
-  const invertedColour = vec3(1.0).sub(finalColour)
-  finalColour.assign(mix(finalColour, invertedColour, nightProgress))
-
-  // collision color tint when detected
-  finalColour.assign(hasCollision.select(uniformCollisionColor, finalColour))
-
-  return finalColour
-})
+const fragmentShader = createFragmentShader({
+  spriteTextureNode,
+  uniformDistanceRan,
+  uniformTRexState,
+  uniformJumpOffsetY,
+  uniformScore,
+  uniformHiScore,
+  uniformCollisionColor
+});
 
 const material = new THREE.NodeMaterial()
-material.fragmentNode = main()
+material.fragmentNode = fragmentShader()
 material.side = THREE.DoubleSide
 
 const mesh = new THREE.Mesh(new THREE.PlaneGeometry(PLANE_WIDTH, PLANE_HEIGHT), material)
