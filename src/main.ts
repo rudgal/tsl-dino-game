@@ -8,7 +8,7 @@ import { getHighScore, setHighScore } from './highScore.ts';
 import { createFragmentShader } from './tsl/fragmentShader.ts';
 import { initDebugGui, updateReferenceImage } from './debugGui.ts';
 import { CollisionDetectionSystem } from './collisionDetection.ts';
-import { CameraAnimation } from './cameraAnimation.ts';
+import { calculateResponsiveCameraZ, CameraAnimation } from './cameraAnimation.ts';
 import { tslBackground } from './tsl/tslBackground.ts';
 import { playSound, SoundType } from './soundPlayer.ts';
 import { ACHIEVEMENT_DISTANCE } from './tsl/tslScore.ts';
@@ -17,16 +17,15 @@ import { ACHIEVEMENT_DISTANCE } from './tsl/tslScore.ts';
   ==== CONSTANTS ====
 */
 // Base plane dimensions (world units)
-const PLANE_WIDTH = 6;
-const PLANE_HEIGHT = 1.5;
+export const PLANE_WIDTH = 6;
+export const PLANE_HEIGHT = 1.5;
 
 // T-Rex position (world coordinates)
 const TREX_X_WORLD = -2.79;
 
 // Camera settings
 const CAMERA_NEAR = 0.1;
-const CAMERA_FAR = 10;
-const CAMERA_Z = 4;
+const CAMERA_FAR = 100;
 
 // Game speed settings
 const GAME_SPEED_START = 3.8;
@@ -52,7 +51,9 @@ const camera = new THREE.PerspectiveCamera(
   CAMERA_NEAR,
   CAMERA_FAR
 )
-camera.position.z = CAMERA_Z
+// Set responsive camera z position
+const initialCameraZ = calculateResponsiveCameraZ(camera);
+camera.position.z = initialCameraZ
 
 const renderer = new THREE.WebGPURenderer({alpha: true, antialias: true})
 renderer.setSize(window.innerWidth, window.innerHeight)
@@ -63,6 +64,7 @@ renderer.setAnimationLoop(animate)
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight
   camera.updateProjectionMatrix()
+  camera.position.z = calculateResponsiveCameraZ(camera);
   renderer.setSize(window.innerWidth, window.innerHeight)
 })
 
@@ -262,7 +264,7 @@ const collisionSystem = new CollisionDetectionSystem(renderer, scene, {
   planeWidth: PLANE_WIDTH,
   planeHeight: PLANE_HEIGHT,
   trexXWorld: TREX_X_WORLD,
-  cameraZ: CAMERA_Z,
+  cameraZ: initialCameraZ,
   cameraNear: CAMERA_NEAR,
   cameraFar: CAMERA_FAR,
   debugMode: DEBUG_MODE

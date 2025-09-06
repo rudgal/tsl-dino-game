@@ -6,6 +6,7 @@
 import * as THREE from 'three/webgpu';
 import { gsap } from 'gsap';
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { PLANE_HEIGHT, PLANE_WIDTH } from './main.ts';
 
 export class CameraAnimation {
   private camera: THREE.PerspectiveCamera;
@@ -133,4 +134,13 @@ export class CameraAnimation {
     }
     this.isAnimating = false;
   }
+}
+
+// Calculate responsive camera Z position based on viewport aspect ratio
+export function calculateResponsiveCameraZ(camera: THREE.PerspectiveCamera): number {
+  const fovRad = (camera.fov * Math.PI) / 180;
+  const distanceForHeight = (PLANE_HEIGHT / 2) / Math.tan(fovRad / 2);
+  const distanceForWidth = (PLANE_WIDTH / 2) / Math.tan(fovRad / 2) / camera.aspect;
+  const requiredDistance = Math.max(distanceForHeight, distanceForWidth);
+  return requiredDistance * 1.2; // Add some padding
 }
