@@ -3,7 +3,7 @@
  * Contains digit sprites for score display
  */
 
-import { abs, float, Fn, int, Loop, mix, select, vec2, vec4 } from 'three/tsl';
+import { abs, float, Fn, If, int, Loop, mix, mod, select, sin, step, time, vec2, vec4 } from 'three/tsl';
 import type { FnArguments } from '../types.ts';
 import { PIXELS_PER_UNIT, sampleSprite } from './tslSpriteUtils.ts';
 
@@ -15,6 +15,10 @@ export const SCORE_SPRITES = {
   TEXT_SPRITE_X: 655, // Base X position for score digits (horizontal layout: 0123456789HI)
   TEXT_SPRITE_Y: 2,   // Base Y position for score digits
 } as const;
+
+// Achievement milestone constants
+export const ACHIEVEMENT_DISTANCE = 100 as const; // Score milestone for blinking animation
+export const ACHIEVEMENT_DISTANCE_DURATION = 15 as const;
 
 // Precomputed dimensions in world units (100px = 1 unit)
 export const DIGIT_WIDTH_UNITS = DIGIT_WIDTH / PIXELS_PER_UNIT;
@@ -49,6 +53,7 @@ export const tslHiText = Fn(([spriteTexture, p, scale]: FnArguments) => {
   );
 });
 
+
 export const tslScore = Fn(([spriteTexture, p, scale, score, hiScore]: FnArguments) => {
   const scoreInt = int(score || 0);
   const numDigitsScore = getDigitCountPerformant(scoreInt).clamp(5, 10);
@@ -59,6 +64,18 @@ export const tslScore = Fn(([spriteTexture, p, scale, score, hiScore]: FnArgumen
   // Each digit is DIGIT_WIDTH_UNITS wide, positioned left of the previous one
   const digitSpacing = float(DIGIT_WIDTH_UNITS);
 
+  // Calculate blinking visibility for achievement milestones
+  const achievementDistance = float(ACHIEVEMENT_DISTANCE);
+  const achievementDistanceDuration = float(ACHIEVEMENT_DISTANCE_DURATION);
+  const isAchievement = score.greaterThan(achievementDistanceDuration).and(mod(score, achievementDistance).lessThan(achievementDistanceDuration));
+  const scoreVisibility = float(1);
+
+  If(isAchievement, () => {
+    const achievementScore = int(score.div(achievementDistance)).mul(achievementDistance);
+    scoreInt.assign(achievementScore);
+    const scoreBlinking = step(0.2, sin(time.mul(10)));
+    scoreVisibility.assign(scoreBlinking);
+  });
 
   // Render current score
   const result = vec4(0);
@@ -66,7 +83,8 @@ export const tslScore = Fn(([spriteTexture, p, scale, score, hiScore]: FnArgumen
     const digit = getDigitAtPositionPerformant(scoreInt, i);
     const digitPosition = p.add(vec2(digitSpacing.mul(i), 0));
     const sprite = tslDigit(spriteTexture, digitPosition, scale, digit);
-    result.assign(mix(result, sprite, sprite.w));
+    const visibleSprite = vec4(sprite.xyz, sprite.w.mul(scoreVisibility));
+    result.assign(mix(result, visibleSprite, visibleSprite.w));
   });
 
   // Render high score digits (with 80% opacity like the original)
