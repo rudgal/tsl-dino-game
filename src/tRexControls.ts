@@ -4,6 +4,7 @@
  */
 
 import { TREX_STATE } from './tsl/tslTRex.ts';
+import { isMobileDevice } from './deviceFeatures';
 
 const JUMP_PHYSICS = {
   INITIAL_JUMP_VELOCITY: 4.0,   // positive = upward (units/second)
@@ -41,6 +42,49 @@ export function initTRexControls(
   // Set up single consolidated event handlers
   document.addEventListener('keydown', onKeyDown);
   document.addEventListener('keyup', onKeyUp);
+
+  initMobileControls();
+}
+
+function handleJumpPress() {
+  const currentState = getState();
+
+  // If crashed, restart the game
+  if (currentState === TREX_STATE.CRASHED) {
+    if (onRestart) {
+      resetTRexControls();
+      onRestart();
+    }
+    return;
+  }
+
+  // If waiting, transition to running (game start)
+  if (currentState === TREX_STATE.WAITING) {
+    if (onStateChange) {
+      onStateChange(TREX_STATE.RUNNING);
+    }
+    return;
+  }
+
+  // Normal jump during gameplay
+  startJump();
+}
+
+function handleDuckPress() {
+  if (getState() === TREX_STATE.CRASHED) return;
+
+  if (jumping) {
+    setSpeedDrop();
+  } else if (!jumping && !ducking) {
+    setDuck(true);
+  }
+}
+
+function handleDuckRelease() {
+  if (getState() === TREX_STATE.CRASHED) return;
+
+  speedDrop = false;
+  setDuck(false);
 }
 
 function onKeyDown(e: KeyboardEvent) {
@@ -182,5 +226,55 @@ export function controlsTRex(deltaTimeSeconds: number): number {
   }
 
   return jumpOffsetY;
+}
+
+function initMobileControls() {
+  const duckButton = document.getElementById('mobile-duck-button') as HTMLButtonElement;
+  const jumpButton = document.getElementById('mobile-jump-button') as HTMLButtonElement;
+
+  if (!duckButton || !jumpButton) return;
+
+  const updateVisibility = () => {
+    const isMobile = isMobileDevice({
+      screenBreakpoint: 768,
+      requireTouch: false,  // Also show on small screens without touch
+      checkUserAgent: true
+    });
+
+    // Set display based on isMobileDevice result
+    const display = isMobile ? 'flex' : 'none';
+    duckButton.style.display = display;
+    jumpButton.style.display = display;
+  };
+
+  // Duck button event listeners
+  const handleDuckDown = (e: Event) => {
+    e.preventDefault();
+    handleDuckPress();
+  };
+
+  const handleDuckUp = (e: Event) => {
+    e.preventDefault();
+    handleDuckRelease();
+  };
+
+  // Duck button - handle both press and release
+  duckButton.addEventListener('touchstart', handleDuckDown);
+  duckButton.addEventListener('touchend', handleDuckUp);
+
+  // Also handle mouse events for testing on desktop
+  duckButton.addEventListener('mousedown', handleDuckDown);
+  duckButton.addEventListener('mouseup', handleDuckUp);
+  duckButton.addEventListener('mouseleave', handleDuckUp);
+
+  const handleJump = (e: Event) => {
+    e.preventDefault();
+    handleJumpPress();
+  };
+  jumpButton.addEventListener('touchstart', handleJump);
+  jumpButton.addEventListener('click', handleJump);
+
+  updateVisibility();
+  window.addEventListener('resize', updateVisibility);
 }
 

@@ -67,15 +67,52 @@ body {
 }
 
 .reference-image.color-shift {
-  filter: 
-    grayscale(1) 
-    sepia(1) 
-    hue-rotate(0deg) 
-    saturate(3) 
+  filter:
+    grayscale(1)
+    sepia(1)
+    hue-rotate(0deg)
+    saturate(3)
     brightness(0.9)
     contrast(1.2);
 }
 
 .dg.ac {
     z-index: 1001 !important; /* Ensure dat.GUI is above other elements */
+}
+
+.mobile-control {
+  position: fixed;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+  transition: background-color 0.1s, transform 0.05s;
+}
+
+.mobile-control:active {
+  background-color: rgba(0, 0, 0, 0.7);
+  transform: scale(0.95);
+}
+
+.jump-button {
+  bottom: 40px;
+  left: 40px;
+}
+
+.duck-button {
+  bottom: 40px;
+  right: 40px;
 }
