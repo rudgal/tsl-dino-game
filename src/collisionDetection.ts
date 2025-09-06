@@ -1,6 +1,8 @@
 /**
  * Collision detection system
- * Uses GPU readback to detect pixel-level collisions
+ * Transport detected collisions from GPU back to CPU
+ * Uses a low-res offscreen render target and pixel readback
+ * Optionally displays the readback texture in debug mode
  */
 
 import * as THREE from 'three/webgpu';
@@ -173,18 +175,4 @@ export class CollisionDetectionSystem {
     return false;
   }
 
-  dispose(): void {
-    // Clean up resources
-    if (this.readbackTarget) {
-      this.readbackTarget.dispose();
-    }
-    if (this.pixelBufferTexture) {
-      this.pixelBufferTexture.dispose();
-    }
-    if (this.readbackDisplayMesh) {
-      this.scene.remove(this.readbackDisplayMesh);
-      this.readbackDisplayMesh.geometry.dispose();
-      (this.readbackDisplayMesh.material as THREE.Material).dispose();
-    }
-  }
 }

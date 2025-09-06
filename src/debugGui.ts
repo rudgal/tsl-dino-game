@@ -5,8 +5,8 @@
 
 import { GUI } from 'dat.gui';
 import * as THREE from 'three/webgpu';
-import { TREX_STATE } from '../tsl/tslTRex.ts';
-import { clearHighScore } from '../highScore.ts';
+import { TREX_STATE } from './tsl/tslTRex.ts';
+import { clearHighScore } from './highScore.ts';
 import type { uniform } from 'three/tsl';
 
 export interface GameOptions {
