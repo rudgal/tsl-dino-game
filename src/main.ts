@@ -10,6 +10,8 @@ import { initDebugGui, updateReferenceImage } from './debug/debugGui.ts';
 import { CollisionDetectionSystem } from './collision/collisionDetection.ts';
 import { CameraAnimation } from './cameraAnimation.ts';
 import { tslBackground } from './tsl/tslBackground.ts';
+import { playSound, SoundType } from './soundPlayer.ts';
+import { ACHIEVEMENT_DISTANCE } from './tsl/tslScore.ts';
 
 /*
   ==== CONSTANTS ====
@@ -94,6 +96,7 @@ const options = {
 const isGameOver = () => options.trexState === TREX_STATE.CRASHED;
 const isGameRunning = () => options.trexState !== TREX_STATE.WAITING && options.trexState !== TREX_STATE.CRASHED;
 
+
 /*
   ==== UNIFORMS ====
 */
@@ -155,7 +158,7 @@ const mouse = new THREE.Vector2()
 /*
   ==== DEBUG GUI & CONTROLS ====
 */
-const distanceRanRef = { value: 0 }; // Reference for GUI to update distanceRan
+const distanceRanRef = {value: 0}; // Reference for GUI to update distanceRan
 
 // Initialize camera animation system
 const cameraAnimation = new CameraAnimation(camera, controls);
@@ -191,8 +194,16 @@ updateReferenceImage(options)
 // Initialize T-Rex controls
 initTRexControls(
   (newState: number) => {
+    // Handle state transitions and play appropriate sounds
+    const previousState = options.trexState;
     options.trexState = newState;
     uniformTRexState.value = options.trexState;
+
+    // sound on jump and game start
+    if ((previousState === TREX_STATE.RUNNING && newState === TREX_STATE.JUMPING)
+      || (previousState === TREX_STATE.WAITING && newState === TREX_STATE.RUNNING)) {
+      playSound(SoundType.BUTTON_PRESS);
+    }
   },
   () => options.trexState,
   gameRestart
@@ -201,6 +212,9 @@ initTRexControls(
 // Game restart function
 function gameRestart() {
   console.log('Restarting game.');
+
+  // Play restart sound
+  playSound(SoundType.BUTTON_PRESS);
 
   // Reset game state variables
   options.distanceRan = 0;
@@ -289,6 +303,11 @@ function animate() {
     const calculatedScore = Math.floor(distanceRan * options.scoreCoefficient);
     options.score = calculatedScore;
     uniformScore.value = options.score;
+
+    // Play achievement sound for score milestones
+    if (calculatedScore > 0 && calculatedScore % ACHIEVEMENT_DISTANCE === 0) {
+      playSound(SoundType.SCORE_REACHED);
+    }
   }
 
   // Always update T-Rex controls (for jump handling even when waiting)
@@ -299,8 +318,11 @@ function animate() {
 
   // Detect collisions at specified interval (only when game is running)
   if (isGameRunning() && clock.getElapsedTime() - lastCollisionCheckTime > COLLISION_DETECTION_INTERVAL) {
-    collisionSystem.detectCollision({ collisionColor: options.collisionColor }).then(collision => {
+    collisionSystem.detectCollision({collisionColor: options.collisionColor}).then(collision => {
       if (!collision) return;
+
+      // Play collision sound
+      playSound(SoundType.HIT);
 
       // Update high score
       if (options.score > options.hiScore) {
