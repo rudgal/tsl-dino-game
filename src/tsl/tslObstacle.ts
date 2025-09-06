@@ -21,7 +21,7 @@ export const OBSTACLE_CONFIG = {
   // Heights (in world units)
   CACTUS_SMALL_HEIGHT_OFFSET: -0.47,    // Small cacti positioned lower (35px tall)
   CACTUS_LARGE_HEIGHT_OFFSET: -0.39,    // Large cacti ground level (50px tall)
-  PTERODACTYL_HEIGHT_OFFSETS: [-0.1, -0.25, -0.4], // High, Mid, Low positions
+  PTERODACTYL_HEIGHT_OFFSETS: [0.05, -0.15, -0.46], // High, Mid, Low positions
 
   // Gaps and spacing
   CACTUS_BASE_GAP: 1.2,      // ~120px in original
